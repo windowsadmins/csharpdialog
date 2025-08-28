@@ -5,9 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:csharpDialog.WPF"
         mc:Ignorable="d"
-        Title="Dialog" Height="300" Width="400"
+        Title="Dialog" Height="280" Width="450"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="CanMinimize">
+        ResizeMode="CanMinimize"
+        Background="#f8f9fa">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -16,23 +17,26 @@
         </Grid.RowDefinitions>
         
         <!-- Header with Icon and Title -->
-        <Border Grid.Row="0" Background="#F0F0F0" Padding="10">
+        <Border Grid.Row="0" Background="#e9ecef" Padding="15,12" BorderBrush="#dee2e6" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal">
-                <Image x:Name="DialogIcon" Width="32" Height="32" Margin="0,0,10,0" 
+                <Image x:Name="DialogIcon" Width="24" Height="24" Margin="0,0,12,0" 
                        Source="{x:Null}" Visibility="Collapsed"/>
                 <TextBlock x:Name="DialogTitle" Text="Dialog Title" 
-                          FontSize="16" FontWeight="Bold" 
+                          FontSize="16" FontWeight="SemiBold" 
+                          Foreground="#2c3e50"
                           VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
         
         <!-- Content Area -->
-        <ScrollViewer Grid.Row="1" Padding="20">
+        <ScrollViewer Grid.Row="1" Padding="20,16">
             <StackPanel>
                 <!-- Message Text -->
                 <TextBlock x:Name="MessageText" Text="Dialog message goes here." 
                           TextWrapping="Wrap" 
-                          FontSize="12" 
+                          FontSize="14" 
+                          Foreground="#2c3e50"
+                          LineHeight="20"
                           Margin="0,0,0,20"/>
                 
                 <!-- Image Display -->
@@ -44,12 +48,13 @@
                 
                 <!-- Video Display (Placeholder) -->
                 <Border x:Name="VideoContainer" 
-                        Background="Black" 
+                        Background="#343a40" 
                         Height="200" 
+                        CornerRadius="4"
                         Visibility="Collapsed"
                         Margin="0,0,0,20">
                     <TextBlock Text="Video Player Placeholder" 
-                              Foreground="White" 
+                              Foreground="#f8f9fa" 
                               HorizontalAlignment="Center" 
                               VerticalAlignment="Center"/>
                 </Border>
@@ -57,7 +62,7 @@
         </ScrollViewer>
         
         <!-- Button Area -->
-        <Border Grid.Row="2" Background="#F0F0F0" Padding="10">
+        <Border Grid.Row="2" Background="#f8f9fa" Padding="20,12" BorderBrush="#dee2e6" BorderThickness="0,1,0,0">
             <StackPanel x:Name="ButtonPanel" Orientation="Horizontal" 
                        HorizontalAlignment="Right">
                 <!-- Buttons will be dynamically added here -->

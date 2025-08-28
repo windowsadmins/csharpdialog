@@ -1,0 +1,33 @@
+# Build outputs
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.cache
+
+# IDE files
+.vs/
+.vscode/settings.json
+.vscode/launch.json
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Package files
+*.nupkg
+*.snupkg
+
+# Signing keys (security)
+*.snk
+*.pfx
+
+# Copilot instructions (project-specific)
+.github/copilot-instructions.md
+
+# Test outputs
+TestResults/
