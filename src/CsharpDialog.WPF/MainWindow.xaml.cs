@@ -42,6 +42,11 @@ public partial class MainWindow : Window
         return _result;
     }
 
+    public DialogResult GetDialogResult()
+    {
+        return _result;
+    }
+
     private void ApplyConfiguration()
     {
         if (_configuration == null) return;
@@ -151,32 +156,54 @@ public partial class MainWindow : Window
         VideoContainer.Visibility = Visibility.Visible;
     }
 
-    private void CreateButtons()
-    {
-        if (_configuration == null) return;
-        
-        ButtonPanel.Children.Clear();
-
-        foreach (var buttonConfig in _configuration.Buttons)
+        private void CreateButtons()
         {
-            var button = new Button
+            if (_configuration == null) return;
+            
+            ButtonPanel.Children.Clear();
+
+            foreach (var buttonConfig in _configuration.Buttons)
             {
-                Content = buttonConfig.Text,
-                Margin = new Thickness(5, 0, 0, 0),
-                Padding = new Thickness(15, 5, 15, 5),
-                MinWidth = 75,
-                IsDefault = buttonConfig.IsDefault,
-                IsCancel = buttonConfig.IsCancel
-            };
+                var button = new Button
+                {
+                    Content = buttonConfig.Text,
+                    Margin = new Thickness(8, 0, 0, 0),
+                    Padding = new Thickness(20, 8, 20, 8),
+                    MinWidth = 90,
+                    Height = 32,
+                    FontSize = 13,
+                    IsDefault = buttonConfig.IsDefault,
+                    IsCancel = buttonConfig.IsCancel,
+                    Background = buttonConfig.IsDefault ? 
+                        new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0078d4")) :
+                        new SolidColorBrush((Color)ColorConverter.ConvertFromString("#f8f9fa")),
+                    Foreground = buttonConfig.IsDefault ?
+                        new SolidColorBrush(Colors.White) :
+                        new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2c3e50")),
+                    BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#dee2e6")),
+                    BorderThickness = new Thickness(1)
+                };
 
-            string action = buttonConfig.Action;
-            button.Click += (s, e) => ButtonClicked(action);
+                // Add hover effects
+                button.Style = CreateButtonStyle(buttonConfig.IsDefault);
 
-            ButtonPanel.Children.Add(button);
+                string action = buttonConfig.Action;
+                button.Click += (s, e) => ButtonClicked(action);
+
+                ButtonPanel.Children.Add(button);
+            }
         }
-    }
-
-    private void SetTimeout()
+        
+        private Style CreateButtonStyle(bool isPrimary)
+        {
+            var style = new Style(typeof(Button));
+            
+            // Set base properties
+            style.Setters.Add(new Setter(Button.FontFamilyProperty, new FontFamily("Segoe UI")));
+            style.Setters.Add(new Setter(Button.CursorProperty, Cursors.Hand));
+            
+            return style;
+        }    private void SetTimeout()
     {
         if (_configuration == null || !_configuration.Timeout.HasValue || _configuration.Timeout <= 0) return;
         
