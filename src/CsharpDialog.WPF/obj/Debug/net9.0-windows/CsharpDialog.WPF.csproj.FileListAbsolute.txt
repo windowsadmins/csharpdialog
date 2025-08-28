@@ -22,3 +22,4 @@ C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.WPF\obj\Debug\net
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.WPF\obj\Debug\net9.0-windows\CsharpDialog.WPF.pdb
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.WPF\obj\Debug\net9.0-windows\CsharpDialog.WPF.genruntimeconfig.cache
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.WPF\obj\Debug\net9.0-windows\ref\CsharpDialog.WPF.dll
+C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.WPF\obj\Debug\net9.0-windows\CsharpDialog.WPF.sourcelink.json

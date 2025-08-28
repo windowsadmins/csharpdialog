@@ -1,4 +1,4 @@
-﻿using CsharpDialog.Core;
+﻿using csharpDialog.Core;
 using System;
 using System.IO;
 using System.Text;
@@ -13,7 +13,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace CsharpDialog.WPF;
+namespace csharpDialog.WPF;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml

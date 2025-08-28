@@ -9,6 +9,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Code signing will be configured for enterprise environment -->
+    <!-- SignAssembly>true</SignAssembly -->
+    <!-- PostBuildEvent>signtool sign /n "EmilyCarrU Intune Windows Enterprise Certificate" /t http://timestamp.sectigo.com "$(TargetPath)"</PostBuildEvent -->
   </PropertyGroup>
 
 </Project>

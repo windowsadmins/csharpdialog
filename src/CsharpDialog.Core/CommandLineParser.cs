@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace CsharpDialog.Core
+namespace csharpDialog.Core
 {
     /// <summary>
     /// Command line argument parser for dialog configuration
@@ -127,7 +127,7 @@ namespace CsharpDialog.Core
 
         private static void ShowHelp()
         {
-            Console.WriteLine("CsharpDialog - Windows Dialog Utility");
+            Console.WriteLine("csharpDialog - Windows Dialog Utility");
             Console.WriteLine("A Windows port of swiftDialog");
             Console.WriteLine();
             Console.WriteLine("Usage:");

@@ -1,10 +1,10 @@
-# CsharpDialog
+# csharpDialog
 
-A Windows port of [swiftDialog](https://github.com/swiftDialog/swiftDialog) written in C#. CsharpDialog provides a powerful command-line utility for creating customizable dialog boxes and notifications on Windows.
+A Windows port of [swiftDialog](https://github.com/swiftDialog/swiftDialog) written in C#. csharpDialog provides a powerful command-line utility for creating customizable dialog boxes and notifications on Windows.
 
 ## Overview
 
-CsharpDialog brings the elegant simplicity of macOS swiftDialog to Windows users, allowing system administrators, developers, and automation scripts to create rich, interactive dialog boxes with minimal effort.
+csharpDialog brings the elegant simplicity of macOS swiftDialog to Windows users, allowing system administrators, developers, and automation scripts to create rich, interactive dialog boxes with minimal effort.
 
 ## Features
 
@@ -20,9 +20,9 @@ CsharpDialog brings the elegant simplicity of macOS swiftDialog to Windows users
 
 The project is structured as a multi-project solution:
 
-- **CsharpDialog.Core**: Shared library with dialog configuration and services
-- **CsharpDialog.CLI**: Command-line interface application
-- **CsharpDialog.WPF**: Windows Presentation Foundation GUI components
+- **csharpDialog.Core**: Shared library with dialog configuration and services
+- **csharpDialog.CLI**: Command-line interface application
+- **csharpDialog.WPF**: Windows Presentation Foundation GUI components
 
 ## Installation
 
@@ -37,6 +37,33 @@ The project is structured as a multi-project solution:
 git clone https://github.com/windowsadmins/csharpdialog.git
 cd csharpdialog
 dotnet build
+```
+
+### Enterprise Environment Setup
+
+For enterprise environments with code signing requirements:
+
+```powershell
+# Build and sign with enterprise certificate
+.\sign-build.ps1 -All
+
+# Or build and sign separately
+.\sign-build.ps1 -Build
+.\sign-build.ps1 -Sign
+```
+
+**Note**: Signing requires the "EmilyCarrU Intune Windows Enterprise Certificate" to be available in the certificate store.
+
+### Running in Restricted Environments
+
+If executable files are blocked by security policies, use the PowerShell launcher:
+
+```powershell
+# Use the PowerShell launcher script
+.\csharpdialog.ps1 --title "Hello" --message "World"
+
+# Or run the DLL directly
+dotnet "src\CsharpDialog.CLI\bin\Debug\net9.0\CsharpDialog.CLI.dll" --title "Hello" --message "World"
 ```
 
 ### Usage
@@ -135,9 +162,9 @@ dotnet test
 ```
 csharpdialog/
 ├── src/
-│   ├── CsharpDialog.Core/       # Shared library
-│   ├── CsharpDialog.CLI/        # Command-line interface
-│   └── CsharpDialog.WPF/        # WPF GUI components
+│   ├── csharpDialog.Core/       # Shared library
+│   ├── csharpDialog.CLI/        # Command-line interface
+│   └── csharpDialog.WPF/        # WPF GUI components
 ├── tests/                       # Unit tests (planned)
 ├── docs/                        # Documentation (planned)
 └── README.md
@@ -182,4 +209,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-*CsharpDialog - Bringing elegant dialog boxes to Windows*
+*csharpDialog - Bringing elegant dialog boxes to Windows*

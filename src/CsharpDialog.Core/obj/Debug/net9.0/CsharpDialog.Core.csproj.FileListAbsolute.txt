@@ -5,6 +5,7 @@ C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\ne
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\CsharpDialog.Core.AssemblyInfoInputs.cache
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\CsharpDialog.Core.AssemblyInfo.cs
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\CsharpDialog.Core.csproj.CoreCompileInputs.cache
+C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\CsharpDialog.Core.sourcelink.json
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\CsharpDialog.Core.dll
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\refint\CsharpDialog.Core.dll
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.Core\obj\Debug\net9.0\CsharpDialog.Core.pdb
