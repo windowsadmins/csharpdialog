@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "CsharpDialog.WPF/1.0.0": {
+        "dependencies": {
+          "CsharpDialog.Core": "1.0.0"
+        },
+        "runtime": {
+          "CsharpDialog.WPF.dll": {}
+        }
+      },
+      "CsharpDialog.Core/1.0.0": {
+        "runtime": {
+          "CsharpDialog.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CsharpDialog.WPF/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "CsharpDialog.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
