@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CsharpDialog.Core
+namespace csharpDialog.Core
 {
     /// <summary>
     /// Represents the configuration for a dialog box

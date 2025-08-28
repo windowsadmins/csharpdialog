@@ -1,7 +1,7 @@
-﻿using CsharpDialog.Core;
+﻿using csharpDialog.Core;
 using System;
 
-namespace CsharpDialog.CLI
+namespace csharpDialog.CLI
 {
     class Program
     {
