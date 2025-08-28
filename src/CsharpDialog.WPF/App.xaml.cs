@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace CsharpDialog.WPF;
+namespace csharpDialog.WPF;
 
 /// <summary>
 /// Interaction logic for App.xaml

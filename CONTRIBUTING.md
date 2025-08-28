@@ -1,6 +1,6 @@
-# Contributing to CsharpDialog
+# Contributing to csharpDialog
 
-Thank you for your interest in contributing to CsharpDialog! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to csharpDialog! This document provides guidelines and information for contributors.
 
 ## Getting Started
 
@@ -44,9 +44,9 @@ Thank you for your interest in contributing to CsharpDialog! This document provi
 
 ### Project Structure
 
-- **CsharpDialog.Core**: Shared models, interfaces, and business logic
-- **CsharpDialog.CLI**: Command-line interface and argument parsing
-- **CsharpDialog.WPF**: WPF-specific UI components and dialogs
+- **csharpDialog.Core**: Shared models, interfaces, and business logic
+- **csharpDialog.CLI**: Command-line interface and argument parsing
+- **csharpDialog.WPF**: WPF-specific UI components and dialogs
 
 ### Branch Naming
 
@@ -154,7 +154,7 @@ We welcome:
 dotnet test
 
 # Run specific test project
-dotnet test tests/CsharpDialog.Tests/
+dotnet test tests/csharpDialog.Tests/
 ```
 
 ### Writing Tests
@@ -206,4 +206,4 @@ Contributors will be acknowledged in:
 - README.md contributors section
 - Git commit history
 
-Thank you for contributing to CsharpDialog!
+Thank you for contributing to csharpDialog!

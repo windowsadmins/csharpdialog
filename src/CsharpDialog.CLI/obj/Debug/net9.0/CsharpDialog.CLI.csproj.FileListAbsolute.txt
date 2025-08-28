@@ -10,6 +10,7 @@ C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\CsharpDialog.CLI.AssemblyInfoInputs.cache
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\CsharpDialog.CLI.AssemblyInfo.cs
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\CsharpDialog.CLI.csproj.CoreCompileInputs.cache
+C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\CsharpDialog.CLI.sourcelink.json
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\CsharpDi.5EC1E70C.Up2Date
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\CsharpDialog.CLI.dll
 C:\Users\rchristiansen\Developer\csharpdialog\src\CsharpDialog.CLI\obj\Debug\net9.0\refint\CsharpDialog.CLI.dll

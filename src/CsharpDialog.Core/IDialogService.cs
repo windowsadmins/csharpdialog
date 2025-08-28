@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace CsharpDialog.Core
+namespace csharpDialog.Core
 {
     /// <summary>
     /// Interface for dialog services
