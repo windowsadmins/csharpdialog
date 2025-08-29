@@ -13,8 +13,8 @@ if ($All) {
 }
 
 $rootPath = $PSScriptRoot
-$cliExe = Join-Path $rootPath "src\CsharpDialog.CLI\bin\Debug\net9.0\CsharpDialog.CLI.exe"
-$wpfExe = Join-Path $rootPath "src\CsharpDialog.WPF\bin\Debug\net9.0-windows\CsharpDialog.WPF.exe"
+$cliExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\Debug\net9.0\csharpDialog.CLI.exe"
+$wpfExe = Join-Path $rootPath "src\csharpDialog.WPF\bin\Debug\net9.0-windows\csharpDialog.WPF.exe"
 
 if ($Build) {
     Write-Host "Building csharpDialog..." -ForegroundColor Green

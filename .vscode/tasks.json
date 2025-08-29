@@ -20,7 +20,7 @@
 			"args": [
 				"run",
 				"--project",
-				"src/CsharpDialog.CLI"
+				"src/csharpDialog.CLI"
 			],
 			"group": "build"
 		}
