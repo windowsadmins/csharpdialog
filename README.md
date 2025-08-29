@@ -63,7 +63,7 @@ If executable files are blocked by security policies, use the PowerShell launche
 .\csharpdialog.ps1 --title "Hello" --message "World"
 
 # Or run the DLL directly
-dotnet "src\CsharpDialog.CLI\bin\Debug\net9.0\CsharpDialog.CLI.dll" --title "Hello" --message "World"
+dotnet "src\csharpDialog.CLI\bin\Debug\net9.0\csharpDialog.CLI.dll" --title "Hello" --message "World"
 ```
 
 ### Usage
@@ -71,7 +71,7 @@ dotnet "src\CsharpDialog.CLI\bin\Debug\net9.0\CsharpDialog.CLI.dll" --title "Hel
 Basic usage:
 ```bash
 # Simple message dialog
-csharpdialog --title "Hello" --message "Welcome to CsharpDialog!"
+csharpdialog --title "Hello" --message "Welcome to csharpDialog!"
 
 # Confirmation dialog
 csharpdialog --title "Confirm Action" --message "Are you sure?" --button1 "Yes" --button2 "No"
