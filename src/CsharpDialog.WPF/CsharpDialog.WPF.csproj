@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\CsharpDialog.Core\CsharpDialog.Core.csproj" />
+    <ProjectReference Include="..\csharpDialog.Core\csharpDialog.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

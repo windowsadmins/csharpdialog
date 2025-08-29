@@ -5,11 +5,11 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsharpDialog.WPF", "src\CsharpDialog.WPF\CsharpDialog.WPF.csproj", "{536729C0-D73A-4932-B7F1-DE7A95C1B7FD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csharpDialog.WPF", "src\csharpDialog.WPF\csharpDialog.WPF.csproj", "{536729C0-D73A-4932-B7F1-DE7A95C1B7FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsharpDialog.CLI", "src\CsharpDialog.CLI\CsharpDialog.CLI.csproj", "{6C6581D1-9B9A-4847-99C9-70BBB8636223}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csharpDialog.CLI", "src\csharpDialog.CLI\csharpDialog.CLI.csproj", "{6C6581D1-9B9A-4847-99C9-70BBB8636223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsharpDialog.Core", "src\CsharpDialog.Core\CsharpDialog.Core.csproj", "{151DDE5A-F3B3-407B-BB38-9936FC749908}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "csharpDialog.Core", "src\csharpDialog.Core\csharpDialog.Core.csproj", "{151DDE5A-F3B3-407B-BB38-9936FC749908}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
