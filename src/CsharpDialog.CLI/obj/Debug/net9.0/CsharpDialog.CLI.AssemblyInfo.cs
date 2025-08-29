@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CsharpDialog.CLI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+640f90ebe0bec2697e33baabef4b89ded9d0284f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b01c87aea6136eaae9e2d5d316578f832ac7c44")]
 [assembly: System.Reflection.AssemblyProductAttribute("CsharpDialog.CLI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CsharpDialog.CLI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
