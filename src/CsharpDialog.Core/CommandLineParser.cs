@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using csharpDialog.Core.Models;
 
 namespace csharpDialog.Core
 {
@@ -108,6 +109,30 @@ namespace csharpDialog.Core
                         config.ImagePath = value;
                         i++;
                         break;
+                    case "--commandfile":
+                        config.CommandFilePath = value;
+                        config.EnableCommandFile = true;
+                        i++;
+                        break;
+                    case "--progress":
+                        config.ShowProgressBar = true;
+                        if (int.TryParse(value, out int progressMax))
+                        {
+                            config.ProgressMaximum = progressMax;
+                            i++;
+                        }
+                        break;
+                    case "--progresstext":
+                        config.ProgressText = value;
+                        config.ShowProgressBar = true;
+                        i++;
+                        break;
+                    case "--listitem":
+                        // Basic list item support - enhanced version will come in Phase 2
+                        config.ListItems.Add(new ListItemConfiguration(value));
+                        config.ShowListItems = true;
+                        i++;
+                        break;
                     case "--help":
                     case "-h":
                         ShowHelp();
@@ -151,6 +176,10 @@ namespace csharpDialog.Core
             Console.WriteLine("  --markdown               Enable markdown in message");
             Console.WriteLine("  --video <path>           Display video");
             Console.WriteLine("  --image <path>           Display image");
+            Console.WriteLine("  --commandfile <path>     Monitor command file for updates");
+            Console.WriteLine("  --progress [max]         Show progress bar");
+            Console.WriteLine("  --progresstext <text>    Set progress text");
+            Console.WriteLine("  --listitem <text>        Add list item");
             Console.WriteLine("  --help, -h               Show this help");
             Console.WriteLine();
             Console.WriteLine("Examples:");

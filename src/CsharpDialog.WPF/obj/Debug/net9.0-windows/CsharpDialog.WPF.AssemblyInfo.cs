@@ -10,12 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("CsharpDialog.WPF")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("csharpDialog.WPF")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b01c87aea6136eaae9e2d5d316578f832ac7c44")]
-[assembly: System.Reflection.AssemblyProductAttribute("CsharpDialog.WPF")]
-[assembly: System.Reflection.AssemblyTitleAttribute("CsharpDialog.WPF")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e512ae63a42b2a26fce955e63b8bf45b6a922cfd")]
+[assembly: System.Reflection.AssemblyProductAttribute("csharpDialog.WPF")]
+[assembly: System.Reflection.AssemblyTitleAttribute("csharpDialog.WPF")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
