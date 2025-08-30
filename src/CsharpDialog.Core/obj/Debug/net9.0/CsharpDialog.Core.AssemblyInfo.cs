@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("csharpDialog.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e512ae63a42b2a26fce955e63b8bf45b6a922cfd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ff6ed0b347ff0ccefe5331a9414968e6a209b79")]
 [assembly: System.Reflection.AssemblyProductAttribute("csharpDialog.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("csharpDialog.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

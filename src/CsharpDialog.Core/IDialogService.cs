@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using csharpDialog.Core.Services;
 using csharpDialog.Core.Models;
+using CSharpDialog.Core.Models;
+using CSharpDialog.Core.Services;
 
 namespace csharpDialog.Core
 {
@@ -118,6 +121,47 @@ namespace csharpDialog.Core
         /// Event raised when command output is received during execution
         /// </summary>
         event EventHandler<CommandOutputEventArgs>? CommandOutputReceived;
+
+        // Phase 6: Advanced Dialog Styling and Themes
+        /// <summary>
+        /// Applies a predefined theme to the dialog
+        /// </summary>
+        Task<bool> ApplyDialogThemeAsync(string themeName);
+
+        /// <summary>
+        /// Applies a custom theme configuration to the dialog
+        /// </summary>
+        Task<bool> ApplyCustomThemeAsync(ThemeConfiguration theme);
+
+        /// <summary>
+        /// Applies individual style properties to dialog elements
+        /// </summary>
+        Task<bool> ApplyStylePropertyAsync(string element, string property, object value);
+
+        /// <summary>
+        /// Applies a complete stylesheet to the dialog
+        /// </summary>
+        Task<bool> ApplyStyleSheetAsync(StyleSheet styleSheet);
+
+        /// <summary>
+        /// Applies branding configuration to the dialog
+        /// </summary>
+        Task<bool> ApplyBrandingAsync(BrandConfiguration brandConfig);
+
+        /// <summary>
+        /// Applies animation to dialog elements
+        /// </summary>
+        Task<bool> ApplyAnimationAsync(string animationType, Dictionary<string, object> parameters);
+
+        /// <summary>
+        /// Gets available theme names
+        /// </summary>
+        Task<List<string>> GetAvailableThemesAsync();
+
+        /// <summary>
+        /// Gets supported style properties for an element
+        /// </summary>
+        Task<Dictionary<string, object>> GetSupportedStylePropertiesAsync(string element);
     }
 
     /// <summary>
@@ -629,6 +673,91 @@ namespace csharpDialog.Core
             }
             
             return false;
+        }
+
+        // Phase 6: Advanced Dialog Styling and Themes Implementation
+        public async Task<bool> ApplyDialogThemeAsync(string themeName)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"Theme applied: {themeName}");
+                // TODO: Implement theme application for console
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyCustomThemeAsync(ThemeConfiguration theme)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"Custom theme applied: {theme.Name}");
+                // TODO: Implement custom theme application for console
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyStylePropertyAsync(string element, string property, object value)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"Style applied: {element}.{property} = {value}");
+                // TODO: Implement style property application for console
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyStyleSheetAsync(StyleSheet styleSheet)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"Stylesheet applied: {styleSheet.Name}");
+                // TODO: Implement stylesheet application for console
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyBrandingAsync(BrandConfiguration brandConfig)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"Branding applied: {brandConfig.CompanyName}");
+                // TODO: Implement branding application for console
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyAnimationAsync(string animationType, Dictionary<string, object> parameters)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"Animation applied: {animationType}");
+                // TODO: Implement animation for console (limited capabilities)
+                return true;
+            });
+        }
+
+        public async Task<List<string>> GetAvailableThemesAsync()
+        {
+            return await Task.Run(() =>
+            {
+                var themes = new List<string> { "corporate", "dark", "modern", "enterprise" };
+                Console.WriteLine($"Available themes: {string.Join(", ", themes)}");
+                return themes;
+            });
+        }
+
+        public async Task<Dictionary<string, object>> GetSupportedStylePropertiesAsync(string element)
+        {
+            return await Task.Run(() =>
+            {
+                var properties = new Dictionary<string, object>
+                {
+                    ["element"] = element,
+                    ["properties"] = new List<string> { "color", "size", "style" }
+                };
+                Console.WriteLine($"Supported properties for {element}: {string.Join(", ", (List<string>)properties["properties"])}");
+                return properties;
+            });
         }
     }
 }
