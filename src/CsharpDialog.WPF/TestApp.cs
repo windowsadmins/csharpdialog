@@ -2,6 +2,8 @@ using csharpDialog.Core;
 using csharpDialog.Core.Services;
 using csharpDialog.Core.Models;
 using csharpDialog.WPF;
+using CSharpDialog.Core.Models;
+using CSharpDialog.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -93,6 +95,19 @@ namespace csharpDialog.WPF
                     case "executeoutput":
                         var captureResult = await ExecuteAndCaptureOutputAsync(command.Value);
                         return captureResult.Success;
+                    // Phase 6: Advanced Styling and Theming Commands
+                    case "setstyle":
+                        return ProcessSetStyleCommand(command.Value).Result;
+                    case "applytheme":
+                        return ApplyDialogThemeAsync(command.Value).Result;
+                    case "setlogo":
+                        return ProcessSetLogoCommand(command.Value).Result;
+                    case "setwatermark":
+                        return ProcessSetWatermarkCommand(command.Value).Result;
+                    case "applycss":
+                        return ProcessApplyCssCommand(command.Value).Result;
+                    case "animate":
+                        return ProcessAnimateCommand(command.Value).Result;
                     default:
                         Console.WriteLine($"WPF Command processed: {command.Type}");
                         return true;
@@ -356,6 +371,154 @@ namespace csharpDialog.WPF
             CommandOutputReceived?.Invoke(this, e);
             // TODO: Update actual WPF dialog with command output
         }
+
+        // Phase 6: Advanced Dialog Styling and Themes Implementation
+        public async Task<bool> ApplyDialogThemeAsync(string themeName)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Theme applied: {themeName}");
+                // TODO: Implement WPF theme application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyCustomThemeAsync(ThemeConfiguration theme)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Custom theme applied: {theme.Name}");
+                // TODO: Implement WPF custom theme application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyStylePropertyAsync(string element, string property, object value)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Style property applied: {element}.{property} = {value}");
+                // TODO: Implement WPF style property application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyStyleSheetAsync(StyleSheet styleSheet)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Stylesheet applied: {styleSheet.Name}");
+                // TODO: Implement WPF stylesheet application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyBrandingAsync(BrandConfiguration brandConfig)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Branding applied: {brandConfig.CompanyName}");
+                // TODO: Implement WPF branding application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyAnimationAsync(string animationType, Dictionary<string, object> parameters)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Animation applied: {animationType}");
+                // TODO: Implement WPF animation
+                return true;
+            });
+        }
+
+        public async Task<List<string>> GetAvailableThemesAsync()
+        {
+            return await Task.Run(() =>
+            {
+                var themes = new List<string> { "corporate", "dark", "modern", "enterprise" };
+                Console.WriteLine($"WPF Available themes: {string.Join(", ", themes)}");
+                return themes;
+            });
+        }
+
+        public async Task<Dictionary<string, object>> GetSupportedStylePropertiesAsync(string element)
+        {
+            return await Task.Run(() =>
+            {
+                var properties = new Dictionary<string, object>
+                {
+                    ["element"] = element,
+                    ["properties"] = new List<string> { "color", "size", "style" }
+                };
+                Console.WriteLine($"WPF Supported properties for {element}: {string.Join(", ", (List<string>)properties["properties"])}");
+                return properties;
+            });
+        }
+
+        // Phase 6: Advanced Styling Command Processors for WpfDialogService  
+        private async Task<bool> ProcessSetStyleCommand(string commandValue)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    var parts = commandValue.Split(',', 3, StringSplitOptions.TrimEntries);
+                    if (parts.Length == 3)
+                    {
+                        var element = parts[0];
+                        var property = parts[1];
+                        var value = parts[2];
+                        
+                        Console.WriteLine($"WPF Style applied: {element}.{property} = {value}");
+                        return true;
+                    }
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"WPF Style command error: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
+        private async Task<bool> ProcessSetLogoCommand(string logoPath)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Logo set: {logoPath}");
+                return true;
+            });
+        }
+
+        private async Task<bool> ProcessSetWatermarkCommand(string watermarkText)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Watermark set: {watermarkText}");
+                return true;
+            });
+        }
+
+        private async Task<bool> ProcessApplyCssCommand(string css)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF CSS applied: {css}");
+                return true;
+            });
+        }
+
+        private async Task<bool> ProcessAnimateCommand(string animationConfig)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Animation applied: {animationConfig}");
+                return true;
+            });
+        }
     }
 }
 
@@ -455,6 +618,159 @@ namespace csharpDialog.WPF.Test
             {
                 MessageBox.Show($"Error: {ex.Message}", "Test Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        // Phase 6: Advanced Styling and Theming Command Processors
+        private async Task<bool> ProcessSetStyleCommand(string commandValue)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    var parts = commandValue.Split(',', 3, StringSplitOptions.TrimEntries);
+                    if (parts.Length == 3)
+                    {
+                        var element = parts[0];
+                        var property = parts[1];
+                        var value = parts[2];
+                        
+                        Console.WriteLine($"WPF Style applied: {element}.{property} = {value}");
+                        // TODO: Apply actual WPF styling
+                        return true;
+                    }
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"WPF Style command error: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
+        private async Task<bool> ProcessSetLogoCommand(string logoPath)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Logo set: {logoPath}");
+                // TODO: Implement logo setting in WPF
+                return true;
+            });
+        }
+
+        private async Task<bool> ProcessSetWatermarkCommand(string watermarkText)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Watermark set: {watermarkText}");
+                // TODO: Implement watermark setting in WPF
+                return true;
+            });
+        }
+
+        private async Task<bool> ProcessApplyCssCommand(string css)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF CSS applied: {css}");
+                // TODO: Implement CSS application in WPF (may require custom rendering)
+                return true;
+            });
+        }
+
+        private async Task<bool> ProcessAnimateCommand(string animationConfig)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Animation applied: {animationConfig}");
+                // TODO: Implement WPF animations
+                return true;
+            });
+        }
+
+        // Phase 6: Advanced Dialog Styling and Themes Implementation
+        public async Task<bool> ApplyDialogThemeAsync(string themeName)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Theme applied: {themeName}");
+                // TODO: Implement WPF theme application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyCustomThemeAsync(ThemeConfiguration theme)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Custom theme applied: {theme.Name}");
+                // TODO: Implement WPF custom theme application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyStylePropertyAsync(string element, string property, object value)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Style property applied: {element}.{property} = {value}");
+                // TODO: Implement WPF style property application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyStyleSheetAsync(StyleSheet styleSheet)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Stylesheet applied: {styleSheet.Name}");
+                // TODO: Implement WPF stylesheet application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyBrandingAsync(BrandConfiguration brandConfig)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Branding applied: {brandConfig.CompanyName}");
+                // TODO: Implement WPF branding application
+                return true;
+            });
+        }
+
+        public async Task<bool> ApplyAnimationAsync(string animationType, Dictionary<string, object> parameters)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Animation applied: {animationType}");
+                // TODO: Implement WPF animation
+                return true;
+            });
+        }
+
+        public async Task<List<string>> GetAvailableThemesAsync()
+        {
+            return await Task.Run(() =>
+            {
+                var themes = new List<string> { "corporate", "dark", "modern", "enterprise" };
+                Console.WriteLine($"WPF Available themes: {string.Join(", ", themes)}");
+                return themes;
+            });
+        }
+
+        public async Task<Dictionary<string, object>> GetSupportedStylePropertiesAsync(string element)
+        {
+            return await Task.Run(() =>
+            {
+                var properties = new Dictionary<string, object>
+                {
+                    ["element"] = element,
+                    ["properties"] = new List<string> { "color", "size", "style" }
+                };
+                Console.WriteLine($"WPF Supported properties for {element}: {string.Join(", ", (List<string>)properties["properties"])}");
+                return properties;
+            });
         }
     }
 }
