@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using csharpDialog.Core.Models;
 
 namespace csharpDialog.Core
 {
@@ -23,6 +24,46 @@ namespace csharpDialog.Core
         public bool EnableMarkdown { get; set; } = false;
         public string VideoPath { get; set; } = string.Empty;
         public string ImagePath { get; set; } = string.Empty;
+        
+        // Command file configuration
+        public string CommandFilePath { get; set; } = string.Empty;
+        public bool EnableCommandFile { get; set; } = false;
+        public bool AutoClearCommandFile { get; set; } = true;
+        
+        // Progress bar configuration
+        public bool ShowProgressBar { get; set; } = false;
+        public int ProgressValue { get; set; } = 0;
+        public int ProgressMaximum { get; set; } = 100;
+        public string ProgressText { get; set; } = string.Empty;
+        
+        // List items configuration
+        public List<ListItemConfiguration> ListItems { get; set; } = new List<ListItemConfiguration>();
+        public bool ShowListItems { get; set; } = false;
+        
+        // Phase 4: Enhanced configuration properties
+        public int Width 
+        { 
+            get => Size.Width; 
+            set => Size.Width = value; 
+        }
+        
+        public int Height 
+        { 
+            get => Size.Height; 
+            set => Size.Height = value; 
+        }
+        
+        public int TimeoutSeconds 
+        { 
+            get => Timeout ?? 0; 
+            set => Timeout = value > 0 ? value : null; 
+        }
+        
+        /// <summary>
+        /// Metadata dictionary for storing additional configuration data
+        /// Used for advanced styling, behavior, and custom properties
+        /// </summary>
+        public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
     }
 
     /// <summary>

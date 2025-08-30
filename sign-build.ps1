@@ -15,6 +15,7 @@ if ($All) {
 $rootPath = $PSScriptRoot
 $cliExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\Debug\net9.0\csharpDialog.CLI.exe"
 $wpfExe = Join-Path $rootPath "src\csharpDialog.WPF\bin\Debug\net9.0-windows\csharpDialog.WPF.exe"
+$testExe = Join-Path $rootPath "src\CommandFileTest\bin\Debug\net9.0\CommandFileTest.exe"
 
 if ($Build) {
     Write-Host "Building csharpDialog..." -ForegroundColor Green
@@ -41,10 +42,14 @@ if ($Sign) {
         $filesToSign += $wpfExe
     }
     
+    if (Test-Path $testExe) {
+        $filesToSign += $testExe
+    }
+    
     foreach ($file in $filesToSign) {
         Write-Host "Signing: $file" -ForegroundColor Cyan
         try {
-            & signtool sign /n $certificateName /t $timestampUrl $file
+            & signtool sign /fd SHA256 /n $certificateName /t $timestampUrl $file
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "✓ Successfully signed: $file" -ForegroundColor Green
             } else {

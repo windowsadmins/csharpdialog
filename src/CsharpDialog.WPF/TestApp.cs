@@ -1,6 +1,10 @@
 using csharpDialog.Core;
+using csharpDialog.Core.Services;
+using csharpDialog.Core.Models;
 using csharpDialog.WPF;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace csharpDialog.WPF
@@ -10,6 +14,13 @@ namespace csharpDialog.WPF
     /// </summary>
     public class WpfDialogService : IDialogService
     {
+        private ICommandFileMonitor? _commandMonitor;
+        private ShellCommandService? _shellService;
+
+        public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
+        public event EventHandler<CommandOutputEventArgs>? CommandOutputReceived;
+        public bool IsCommandMonitoringActive => _commandMonitor?.IsMonitoring ?? false;
+
         public async Task<DialogResult> ShowDialogAsync(DialogConfiguration configuration)
         {
             return await Task.Run(() => ShowDialog(configuration));
@@ -26,6 +37,324 @@ namespace csharpDialog.WPF
             });
             
             return result;
+        }
+
+        public async Task StartCommandMonitoringAsync(string commandFilePath)
+        {
+            var commandParser = new CommandParser();
+            _commandMonitor = new CommandFileMonitor(commandParser);
+            _commandMonitor.CommandReceived += (sender, args) => CommandReceived?.Invoke(this, args);
+            await _commandMonitor.StartMonitoringAsync(commandFilePath);
+        }
+
+        public void StopCommandMonitoring()
+        {
+            _commandMonitor?.StopMonitoring();
+            _commandMonitor = null;
+        }
+
+        // Phase 2: Dynamic List Item Operations Implementation
+        public async Task<bool> ProcessCommandAsync(Command command)
+        {
+            return await Task.Run(async () =>
+            {
+                Console.WriteLine($"WPF Processing command: {command.Type} = {command.Value}");
+                
+                switch (command.Type.ToLowerInvariant())
+                {
+                    case "progress":
+                        if (int.TryParse(command.Value, out int progressValue))
+                        {
+                            return SetProgressAsync(progressValue).Result;
+                        }
+                        return false;
+                    case "progresstext":
+                        return UpdateProgressTextAsync(command.Value).Result;
+                    case "progressincrement":
+                        if (int.TryParse(command.Value, out int incrementValue))
+                        {
+                            return IncrementProgressAsync(incrementValue).Result;
+                        }
+                        return false;
+                    case "progressreset":
+                        return ResetProgressAsync(command.Value).Result;
+                    case "config":
+                        return LoadJsonConfigurationAsync(command.Value).Result;
+                    case "style":
+                        return ApplyStyleConfigurationAsync(command.Value).Result;
+                    case "theme":
+                        return UpdateThemeAsync(command.Value).Result;
+                    case "execute":
+                        var executeResult = await ExecuteShellCommandAsync(command.Value);
+                        return executeResult.Success;
+                    case "executepowershell":
+                        var psResult = await ExecutePowerShellScriptAsync(command.Value);
+                        return psResult.Success;
+                    case "executeoutput":
+                        var captureResult = await ExecuteAndCaptureOutputAsync(command.Value);
+                        return captureResult.Success;
+                    default:
+                        Console.WriteLine($"WPF Command processed: {command.Type}");
+                        return true;
+                }
+            });
+        }
+
+        public async Task<bool> UpdateListItemAsync(string title, ListItemStatus status, string statusText = "")
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Updated list item '{title}': {status} - {statusText}");
+                // TODO: Update actual WPF list item
+                return true;
+            });
+        }
+
+        public async Task<bool> UpdateListItemByIndexAsync(int index, ListItemStatus status, string statusText = "")
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Updated list item at index {index}: {status} - {statusText}");
+                // TODO: Update actual WPF list item by index
+                return true;
+            });
+        }
+
+        public async Task<bool> AddListItemAsync(string title, ListItemStatus status = ListItemStatus.None, string statusText = "")
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Added list item: '{title}' ({status}) - {statusText}");
+                // TODO: Add to actual WPF list
+                return true;
+            });
+        }
+
+        public async Task<bool> RemoveListItemAsync(string title)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Removed list item: '{title}'");
+                // TODO: Remove from actual WPF list
+                return true;
+            });
+        }
+
+        public async Task<bool> RemoveListItemByIndexAsync(int index)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Removed list item at index: {index}");
+                // TODO: Remove from actual WPF list by index
+                return true;
+            });
+        }
+
+        public async Task<bool> ClearListItemsAsync()
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine("WPF Cleared all list items");
+                // TODO: Clear actual WPF list
+                return true;
+            });
+        }
+
+        // Phase 3: Enhanced Progress Controls Implementation
+        public async Task<bool> SetProgressAsync(int value, string? text = null)
+        {
+            return await Task.Run(() =>
+            {
+                var clampedValue = Math.Clamp(value, 0, 100);
+                Console.WriteLine($"WPF Progress set to {clampedValue}%: {text ?? ""}");
+                // TODO: Update actual WPF progress bar
+                return true;
+            });
+        }
+
+        public async Task<bool> IncrementProgressAsync(int increment, string? text = null)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Progress incremented by {increment}: {text ?? ""}");
+                // TODO: Update actual WPF progress bar
+                return true;
+            });
+        }
+
+        public async Task<bool> ResetProgressAsync(string? text = null)
+        {
+            return await Task.Run(() =>
+            {
+                var resetText = text ?? "Starting...";
+                Console.WriteLine($"WPF Progress reset: {resetText}");
+                // TODO: Reset actual WPF progress bar
+                return true;
+            });
+        }
+
+        public async Task<bool> UpdateProgressTextAsync(string text)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Progress text updated: {text}");
+                // TODO: Update actual WPF progress text
+                return true;
+            });
+        }
+
+        // Phase 4: Advanced JSON Configuration Support Implementation
+        public async Task<bool> LoadJsonConfigurationAsync(string json)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    var jsonConfig = JsonConfigurationService.ParseConfiguration(json);
+                    if (jsonConfig != null)
+                    {
+                        var validation = JsonConfigurationService.ValidateConfiguration(jsonConfig);
+                        if (validation.IsValid)
+                        {
+                            Console.WriteLine("WPF JSON configuration loaded successfully");
+                            // TODO: Apply configuration to actual WPF dialog
+                            if (validation.HasWarnings)
+                            {
+                                foreach (var warning in validation.Warnings)
+                                {
+                                    Console.WriteLine($"WPF Warning: {warning}");
+                                }
+                            }
+                            return true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("WPF JSON configuration validation failed:");
+                            foreach (var error in validation.Errors)
+                            {
+                                Console.WriteLine($"WPF Error: {error}");
+                            }
+                            return false;
+                        }
+                    }
+                    return false;
+                }
+                catch (JsonConfigurationException ex)
+                {
+                    Console.WriteLine($"WPF JSON configuration error: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> LoadJsonConfigurationFromFileAsync(string filePath)
+        {
+            return await Task.Run(async () =>
+            {
+                try
+                {
+                    var jsonConfig = await JsonConfigurationService.ParseConfigurationFromFileAsync(filePath);
+                    if (jsonConfig != null)
+                    {
+                        Console.WriteLine($"WPF JSON configuration loaded from file: {filePath}");
+                        return await LoadJsonConfigurationAsync(System.Text.Json.JsonSerializer.Serialize(jsonConfig));
+                    }
+                    return false;
+                }
+                catch (JsonConfigurationException ex)
+                {
+                    Console.WriteLine($"WPF JSON configuration file error: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> ApplyStyleConfigurationAsync(string styleJson)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    Console.WriteLine($"WPF Applying style configuration: {styleJson}");
+                    // TODO: Parse and apply styling to actual WPF elements
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"WPF Style configuration error: {ex.Message}");
+                    return false;
+                }
+            });
+        }
+
+        public async Task<bool> UpdateThemeAsync(string theme)
+        {
+            return await Task.Run(() =>
+            {
+                Console.WriteLine($"WPF Theme updated to: {theme}");
+                // TODO: Apply theme to actual WPF dialog
+                return true;
+            });
+        }
+
+        // Phase 5: Shell Command Execution Integration Implementation
+        public async Task<CommandExecutionResult> ExecuteShellCommandAsync(string command, string? workingDirectory = null)
+        {
+            _shellService ??= new ShellCommandService();
+            _shellService.OutputReceived += OnShellOutputReceived;
+            
+            Console.WriteLine($"WPF Executing shell command: {command}");
+            if (!ShellCommandService.IsCommandSafe(command))
+            {
+                Console.WriteLine($"WPF ⚠️ Warning: Command may not be safe: {command}");
+            }
+            
+            var result = await _shellService.ExecuteCommandAsync(command, workingDirectory);
+            Console.WriteLine($"WPF Command completed: {result}");
+            
+            _shellService.OutputReceived -= OnShellOutputReceived;
+            return result;
+        }
+
+        public async Task<CommandExecutionResult> ExecutePowerShellScriptAsync(string script, string? workingDirectory = null)
+        {
+            _shellService ??= new ShellCommandService();
+            _shellService.OutputReceived += OnShellOutputReceived;
+            
+            Console.WriteLine($"WPF Executing PowerShell script: {script}");
+            var result = await _shellService.ExecutePowerShellAsync(script, workingDirectory);
+            Console.WriteLine($"WPF PowerShell completed: {result}");
+            
+            _shellService.OutputReceived -= OnShellOutputReceived;
+            return result;
+        }
+
+        public async Task<CommandExecutionResult> ExecuteAndCaptureOutputAsync(string command, string? workingDirectory = null)
+        {
+            _shellService ??= new ShellCommandService();
+            
+            Console.WriteLine($"WPF Executing and capturing: {command}");
+            var result = await _shellService.ExecuteAndCaptureAsync(command, workingDirectory);
+            
+            Console.WriteLine($"WPF Captured output ({result.StandardOutput.Length} chars):");
+            if (!string.IsNullOrEmpty(result.StandardOutput))
+            {
+                Console.WriteLine(result.StandardOutput);
+            }
+            if (!string.IsNullOrEmpty(result.StandardError))
+            {
+                Console.WriteLine($"WPF Errors: {result.StandardError}");
+            }
+            
+            return result;
+        }
+
+        private void OnShellOutputReceived(object? sender, CommandOutputEventArgs e)
+        {
+            var prefix = e.IsError ? "ERR" : "OUT";
+            Console.WriteLine($"WPF [{prefix}] {e.Output}");
+            CommandOutputReceived?.Invoke(this, e);
+            // TODO: Update actual WPF dialog with command output
         }
     }
 }
