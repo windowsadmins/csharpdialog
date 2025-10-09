@@ -171,12 +171,75 @@ namespace csharpDialog.Core
     {
         public static IDialogService CreateWpfDialogService()
         {
-            // This will be implemented in the WPF project
-            throw new NotImplementedException("WPF Dialog Service not implemented yet");
+            // This will be implemented by the WPF service factory extension
+            throw new NotImplementedException("WPF Dialog Service should be created using WpfDialogService directly");
         }
 
         public static IDialogService CreateConsoleDialogService()
         {
+            return new ConsoleDialogService();
+        }
+        
+        /// <summary>
+        /// Creates the appropriate dialog service based on environment and configuration
+        /// </summary>
+        public static IDialogService CreateDialogService(DialogConfiguration? configuration = null)
+        {
+            // Check if this should use WPF (fullscreen, kiosk, or first-run scenarios)
+            bool useWpf = configuration?.Metadata.ContainsKey("FullscreenMode") == true ||
+                         configuration?.Metadata.ContainsKey("KioskMode") == true ||
+                         configuration?.Metadata.ContainsKey("FirstRunMode") == true;
+            
+            Console.WriteLine($"[DEBUG] CreateDialogService - useWpf: {useWpf}");
+            Console.WriteLine($"[DEBUG] Platform: {Environment.OSVersion.Platform}");
+            
+#if WINDOWS
+            if (useWpf && Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                try
+                {
+                    var wpfDllPath = Path.Combine(AppContext.BaseDirectory, "csharpDialog.WPF.dll");
+                    Console.WriteLine($"[DEBUG] Looking for WPF DLL at: {wpfDllPath}");
+                    Console.WriteLine($"[DEBUG] WPF DLL exists: {File.Exists(wpfDllPath)}");
+                    
+                    // Try to load WPF service using reflection to avoid direct dependency
+                    var wpfAssembly = System.Reflection.Assembly.LoadFrom(wpfDllPath);
+                    Console.WriteLine($"[DEBUG] Loaded WPF assembly: {wpfAssembly.FullName}");
+                    
+                    var wpfServiceType = wpfAssembly.GetType("csharpDialog.WPF.Services.WpfDialogService");
+                    Console.WriteLine($"[DEBUG] WPF service type found: {wpfServiceType != null}");
+                    
+                    if (wpfServiceType != null)
+                    {
+                        Console.WriteLine($"[DEBUG] Creating WPF service instance...");
+                        var wpfService = Activator.CreateInstance(wpfServiceType) as IDialogService;
+                        
+                        if (wpfService != null)
+                        {
+                            Console.WriteLine($"[DEBUG] Successfully created WPF service!");
+                            return wpfService;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[DEBUG] WPF service instance is null after creation");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] WPF service loading error: {ex.Message}");
+                    Console.WriteLine($"[DEBUG] Exception type: {ex.GetType().Name}");
+                    Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine($"[DEBUG] Inner exception: {ex.InnerException.Message}");
+                    }
+                }
+                
+                Console.WriteLine("[DEBUG] Falling back to console service");
+            }
+#endif
+            
             return new ConsoleDialogService();
         }
     }
