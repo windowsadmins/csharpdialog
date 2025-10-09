@@ -46,9 +46,8 @@ public class CommandFileMonitor : ICommandFileMonitor
             // Create the command file if it doesn't exist
             await CreateCommandFileAsync(_commandFilePath);
 
-            // Get initial file size to start reading from the end
-            var fileInfo = new FileInfo(_commandFilePath);
-            _lastReadPosition = fileInfo.Exists ? fileInfo.Length : 0;
+            // Start reading from the beginning to process any existing commands
+            _lastReadPosition = 0;
 
             // Set up file system watcher
             var directory = Path.GetDirectoryName(_commandFilePath);
@@ -68,6 +67,10 @@ public class CommandFileMonitor : ICommandFileMonitor
 
             // Set up timer for processing queued commands (debouncing)
             _processingTimer = new Timer(ProcessPendingCommands, null, Timeout.Infinite, Timeout.Infinite);
+
+            // Process any existing commands in the file immediately
+            Console.WriteLine($"[CommandFileMonitor] Processing existing commands in file...");
+            ProcessPendingCommands(null);
 
             OnErrorOccurred($"Started monitoring command file: {_commandFilePath}");
         }
@@ -145,6 +148,7 @@ public class CommandFileMonitor : ICommandFileMonitor
 
     private void OnFileChanged(object sender, FileSystemEventArgs e)
     {
+        Console.WriteLine($"[CommandFileMonitor] File changed detected: {e.FullPath}");
         // Debounce rapid file changes by queuing them for later processing
         _processingTimer?.Change(100, Timeout.Infinite); // Process after 100ms delay
     }
@@ -153,19 +157,28 @@ public class CommandFileMonitor : ICommandFileMonitor
     {
         try
         {
+            Console.WriteLine($"[CommandFileMonitor] ProcessPendingCommands called");
             var newLines = ReadNewLines();
+            Console.WriteLine($"[CommandFileMonitor] Read {newLines.Count} new lines");
             
             foreach (var line in newLines)
             {
+                Console.WriteLine($"[CommandFileMonitor] Parsing line: {line}");
                 var command = _commandParser.ParseCommand(line);
                 if (command != null)
                 {
+                    Console.WriteLine($"[CommandFileMonitor] Command parsed successfully: {command.Type}");
                     OnCommandReceived(command);
+                }
+                else
+                {
+                    Console.WriteLine($"[CommandFileMonitor] Line did not parse to a command (might be comment or empty)");
                 }
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[CommandFileMonitor] ERROR in ProcessPendingCommands: {ex.Message}");
             OnErrorOccurred($"Error processing commands: {ex.Message}", ex);
         }
     }
@@ -223,6 +236,7 @@ public class CommandFileMonitor : ICommandFileMonitor
 
     private void OnCommandReceived(Command command)
     {
+        Console.WriteLine($"[CommandFileMonitor] Command received: Type={command.Type}, Value={command.Value}");
         CommandReceived?.Invoke(this, new CommandReceivedEventArgs(command));
     }
 
