@@ -116,6 +116,14 @@ namespace csharpDialog.Core
                         break;
                     case "--progress":
                         config.ShowProgressBar = true;
+                        if (int.TryParse(value, out int progressValue))
+                        {
+                            config.ProgressValue = progressValue;
+                            i++;
+                        }
+                        break;
+                    case "--progress-max":
+                        config.ShowProgressBar = true;
                         if (int.TryParse(value, out int progressMax))
                         {
                             config.ProgressMaximum = progressMax;
@@ -132,6 +140,28 @@ namespace csharpDialog.Core
                         config.ListItems.Add(new ListItemConfiguration(value));
                         config.ShowListItems = true;
                         i++;
+                        break;
+                    case "--cimian":
+                    case "--cimianmonitor":
+                        config.Metadata["EnableCimianMonitoring"] = true;
+                        break;
+                    case "--firstrun":
+                        config.Metadata["FirstRunMode"] = true;
+                        config.Topmost = true;
+                        config.ShowProgressBar = true;
+                        config.ShowListItems = true;
+                        break;
+                    case "--fullscreen":
+                        config.Metadata["FullscreenMode"] = true;
+                        config.Topmost = true;
+                        break;
+                    case "--kiosk":
+                        config.Metadata["KioskMode"] = true;
+                        config.Metadata["FullscreenMode"] = true;
+                        config.Topmost = true;
+                        break;
+                    case "--autolaunch":
+                        config.Metadata["AutoLaunchFirstRun"] = true;
                         break;
                     case "--help":
                     case "-h":
@@ -177,14 +207,22 @@ namespace csharpDialog.Core
             Console.WriteLine("  --video <path>           Display video");
             Console.WriteLine("  --image <path>           Display image");
             Console.WriteLine("  --commandfile <path>     Monitor command file for updates");
-            Console.WriteLine("  --progress [max]         Show progress bar");
+            Console.WriteLine("  --progress [value]       Set progress value and show progress bar");
+            Console.WriteLine("  --progress-max [max]     Set maximum progress value");
             Console.WriteLine("  --progresstext <text>    Set progress text");
             Console.WriteLine("  --listitem <text>        Add list item");
+            Console.WriteLine("  --cimian                 Enable Cimian progress monitoring");
+            Console.WriteLine("  --firstrun               First-run mode with progress tracking");
+            Console.WriteLine("  --fullscreen             Display in fullscreen mode");
+            Console.WriteLine("  --kiosk                  Kiosk mode (fullscreen, no close button)");
+            Console.WriteLine("  --autolaunch             Auto-launch on first-run detection");
             Console.WriteLine("  --help, -h               Show this help");
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine("  csharpdialog --title \"Hello\" --message \"World\"");
             Console.WriteLine("  csharpdialog -t \"Confirm\" -m \"Are you sure?\" --button1 \"Yes\" --button2 \"No\"");
+            Console.WriteLine("  csharpdialog --firstrun --cimian --title \"Setting up your device\" --fullscreen");
+            Console.WriteLine("  csharpdialog --autolaunch  # Auto-detects first-run and shows Cimian progress");
         }
     }
 }
