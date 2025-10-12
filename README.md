@@ -15,6 +15,9 @@ csharpDialog brings the elegant simplicity of macOS swiftDialog to Windows users
 - **Timeout Support**: Auto-close dialogs after specified time
 - **Markdown Support**: Rich text formatting in messages (planned)
 - **Scriptable**: Perfect for automation and administrative scripts
+- **Cimian Integration**: First-run device setup with progress monitoring
+- **Fullscreen/Kiosk Mode**: Uninterruptible progress display for device deployment
+- **Real-time Progress**: Live updates from Cimian software installations
 
 ## Architecture
 
@@ -181,12 +184,63 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 3. Open in Visual Studio Code or Visual Studio
 4. Run `dotnet restore` to restore packages
 
+## Cimian First-Run Integration
+
+csharpDialog now supports first-run device setup monitoring, similar to how swiftDialog works with Munki on macOS:
+
+```bash
+# Auto-launch for first-run scenarios
+csharpdialog --autolaunch
+
+# Fullscreen Cimian progress monitoring
+csharpdialog --firstrun --cimian --fullscreen --title "Setting up your device"
+
+# Kiosk mode (user cannot close)
+csharpdialog --kiosk --cimian --title "Device Configuration"
+```
+
+**Workflow:**
+1. New Windows device completes OOBE
+2. User signs in with Entra ID
+3. csharpDialog auto-launches in fullscreen
+4. Shows real-time progress of Cimian software installations (Chrome, Zoom, PaperCut, etc.)
+5. User waits for completion before proceeding
+
+See [Cimian Integration Guide](docs/Cimian-Integration.md) for detailed setup instructions.
+
+## Application Icons
+
+csharpDialog uses a **repository-based icon system** similar to Munki on macOS. Icons are deployment assets hosted in your Cimian repository, not extracted from installed applications.
+
+### Key Features
+
+- 📦 **Repository hosted**: Icons stored alongside packages in deployment repo
+- ⚡ **Cached locally**: Downloaded once, instant loading thereafter
+- 🎨 **Available before install**: Show app icons during installation progress
+- 🔄 **Automatic fallbacks**: Generic icons when specific icons unavailable
+
+### Quick Example
+
+```bash
+# Icon from deployment repository (recommended)
+csharpdialog --listitem "title=Chrome,icon_url=https://cimian.company.com/icons/chrome.png"
+
+# Icon with base URL (cleaner)
+csharpdialog --icon-base-url "https://cimian.company.com/icons/" \
+  --listitem "title=Chrome,icon=chrome.png" \
+  --listitem "title=Zoom,icon=zoom.png"
+```
+
+For complete documentation on icon management, extraction, and best practices, see [Icon Management Guide](docs/Icon-Management.md).
+
 ## Roadmap
 
+- [x] Cimian progress monitoring and first-run detection
+- [x] Fullscreen and kiosk mode support
+- [x] Real-time progress bars and list item updates
+- [x] Repository-based icon system with caching
 - [ ] Advanced markdown support
 - [ ] Form elements (text inputs, dropdowns)
-- [ ] Progress bars
-- [ ] List views
 - [ ] Sound notifications
 - [ ] JSON configuration files
 - [ ] PowerShell module
