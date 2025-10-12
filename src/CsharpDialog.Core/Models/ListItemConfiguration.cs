@@ -11,6 +11,7 @@ public class ListItemConfiguration : INotifyPropertyChanged
     private string _title = string.Empty;
     private string _subtitle = string.Empty;
     private string _icon = string.Empty;
+    private string _iconUrl = string.Empty;
     private ListItemStatus _status = ListItemStatus.None;
     private string _statusText = string.Empty;
     private double _progress = 0.0;
@@ -49,8 +50,9 @@ public class ListItemConfiguration : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Optional custom icon path or emoji
+    /// Optional custom icon path, emoji, or icon name
     /// If empty, uses status icon
+    /// Examples: "chrome.png", "C:\Icons\chrome.png", "🌐"
     /// </summary>
     public string Icon
     {
@@ -61,6 +63,26 @@ public class ListItemConfiguration : INotifyPropertyChanged
             {
                 _icon = value;
                 OnPropertyChanged(nameof(Icon));
+                OnPropertyChanged(nameof(DisplayIcon));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Optional icon URL for remote icons (repository-based icons)
+    /// Takes precedence over Icon property if both are specified
+    /// Example: "https://cimian.company.com/deployment/icons/chrome.png"
+    /// Icons from URLs are cached locally for performance
+    /// </summary>
+    public string IconUrl
+    {
+        get => _iconUrl;
+        set
+        {
+            if (_iconUrl != value)
+            {
+                _iconUrl = value;
+                OnPropertyChanged(nameof(IconUrl));
                 OnPropertyChanged(nameof(DisplayIcon));
             }
         }
@@ -144,9 +166,24 @@ public class ListItemConfiguration : INotifyPropertyChanged
     public int Index { get; set; } = 0;
 
     /// <summary>
-    /// Gets the icon to display (custom icon or status icon)
+    /// Gets the icon to display (priority: IconUrl > Icon > Status Icon)
     /// </summary>
-    public string DisplayIcon => string.IsNullOrEmpty(Icon) ? StatusIconProvider.GetIcon(Status) : Icon;
+    public string DisplayIcon
+    {
+        get
+        {
+            // Priority 1: URL-based icon (from repository)
+            if (!string.IsNullOrEmpty(IconUrl))
+                return IconUrl;
+            
+            // Priority 2: Local icon path or emoji
+            if (!string.IsNullOrEmpty(Icon))
+                return Icon;
+            
+            // Priority 3: Status-based icon
+            return StatusIconProvider.GetIcon(Status);
+        }
+    }
 
     /// <summary>
     /// Gets the string representation of the current status
