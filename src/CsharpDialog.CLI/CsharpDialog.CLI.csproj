@@ -12,6 +12,11 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <AssemblyName>dialog</AssemblyName>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <FileVersion>$(Version)</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+    <RollForward>LatestMinor</RollForward>
     <!-- Code signing will be configured for enterprise environment -->
     <!-- SignAssembly>true</SignAssembly -->
     <!-- PostBuildEvent>signtool sign /n "EmilyCarrU Intune Windows Enterprise Certificate" /t http://timestamp.sectigo.com "$(TargetPath)"</PostBuildEvent -->
