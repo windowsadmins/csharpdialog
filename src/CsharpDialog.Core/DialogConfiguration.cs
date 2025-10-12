@@ -40,6 +40,14 @@ namespace csharpDialog.Core
         public List<ListItemConfiguration> ListItems { get; set; } = new List<ListItemConfiguration>();
         public bool ShowListItems { get; set; } = false;
         
+        // Icon management
+        /// <summary>
+        /// Base URL for icon resolution when using icon names instead of full URLs
+        /// Example: "https://cimian.company.com/deployment/icons/"
+        /// When set, icon names like "chrome.png" will be resolved to full URLs
+        /// </summary>
+        public string IconBaseUrl { get; set; } = string.Empty;
+        
         // Phase 4: Enhanced configuration properties
         public int Width 
         { 
