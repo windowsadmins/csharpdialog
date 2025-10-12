@@ -7,6 +7,12 @@ param(
     [switch]$All = $false
 )
 
+# If no flags provided, do everything
+if (!$Build -and !$Sign -and !$All) {
+    $Build = $true
+    $Sign = $true
+}
+
 if ($All) {
     $Build = $true
     $Sign = $true
@@ -16,10 +22,12 @@ $rootPath = $PSScriptRoot
 $cliExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\Debug\net9.0\csharpDialog.CLI.exe"
 $wpfExe = Join-Path $rootPath "src\csharpDialog.WPF\bin\Debug\net9.0-windows\csharpDialog.WPF.exe"
 $testExe = Join-Path $rootPath "src\CommandFileTest\bin\Debug\net9.0\CommandFileTest.exe"
+$demoExe = Join-Path $rootPath "bin\Debug\net9.0-windows\StandaloneDialogDemo.exe"
 
 if ($Build) {
     Write-Host "Building csharpDialog..." -ForegroundColor Green
-    & dotnet build
+    $solutionFile = Join-Path $rootPath "csharpDialog.sln"
+    & dotnet build $solutionFile
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Build failed!"
         exit 1
@@ -46,6 +54,10 @@ if ($Sign) {
         $filesToSign += $testExe
     }
     
+    if (Test-Path $demoExe) {
+        $filesToSign += $demoExe
+    }
+    
     foreach ($file in $filesToSign) {
         Write-Host "Signing: $file" -ForegroundColor Cyan
         try {
@@ -62,13 +74,4 @@ if ($Sign) {
     }
 }
 
-if (!$Build -and !$Sign) {
-    Write-Host "csharpDialog Build & Sign Script" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "Usage:"
-    Write-Host "  .\sign-build.ps1 -Build     # Build the solution"
-    Write-Host "  .\sign-build.ps1 -Sign      # Sign existing binaries"
-    Write-Host "  .\sign-build.ps1 -All       # Build and sign"
-    Write-Host ""
-    Write-Host "Enterprise Certificate: EmilyCarrU Intune Windows Enterprise Certificate"
-}
+
