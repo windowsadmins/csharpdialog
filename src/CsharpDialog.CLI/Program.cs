@@ -91,7 +91,9 @@ namespace csharpDialog.CLI
                             var wpfServiceInstance = Activator.CreateInstance(wpfServiceType);
                             Console.WriteLine($"[DEBUG] Instance created: {wpfServiceInstance?.GetType().Name}");
                             
+#pragma warning disable CS8600
                             dialogService = wpfServiceInstance as IDialogService;
+#pragma warning restore CS8600
                             if (dialogService != null)
                             {
                                 Console.WriteLine("[DEBUG] Successfully cast to IDialogService!");
