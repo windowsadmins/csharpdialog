@@ -14,7 +14,9 @@ namespace csharpDialog.WPF
 
         public ProgressDialogWindow()
         {
+#pragma warning disable CS0103
             InitializeComponent();
+#pragma warning restore CS0103
             
             // Detect and apply system theme
             _isDarkMode = IsSystemDarkMode();

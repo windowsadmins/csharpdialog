@@ -531,7 +531,9 @@ namespace csharpDialog.WPF.Services
         }
 
         // Stub implementations for other interface methods
+#pragma warning disable CS0067
         public event EventHandler<CommandOutputEventArgs>? CommandOutputReceived;
+#pragma warning restore CS0067
         
         private bool IsSystemDarkMode()
         {
