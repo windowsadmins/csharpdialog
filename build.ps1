@@ -7,8 +7,10 @@ param(
     [switch]$Msi = $false,
     [switch]$Pkg = $false,
     [switch]$All = $false,
+    [switch]$SkipMsi = $false,
+    [switch]$SkipPkg = $false,
     [string]$Configuration = "Release",
-    [string[]]$Runtime = @("win-x64")
+    [string[]]$Runtime = @("win-x64", "win-arm64")
 )
 
 # Default behaviour: run everything when no explicit flags provided
@@ -26,6 +28,14 @@ if ($All) {
     $Pkg = $true
 }
 
+if ($SkipMsi) {
+    $Msi = $false
+}
+
+if ($SkipPkg) {
+    $Pkg = $false
+}
+
 $rootPath = $PSScriptRoot
 $solutionFile = Join-Path $rootPath "csharpDialog.sln"
 $cliProject = Join-Path $rootPath "src\csharpDialog.CLI\csharpDialog.CLI.csproj"
@@ -35,11 +45,168 @@ if (-not (Test-Path $artifactsDir)) {
 }
 
 $cliExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net9.0-windows\csharpDialog.CLI.exe"
+$dialogExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net9.0-windows\dialog.exe"
 $wpfExe = Join-Path $rootPath "src\csharpDialog.WPF\bin\$Configuration\net9.0-windows\csharpDialog.WPF.exe"
 $testExe = Join-Path $rootPath "src\CommandFileTest\bin\$Configuration\net9.0\CommandFileTest.exe"
 $demoExe = Join-Path $rootPath "bin\$Configuration\net9.0-windows\StandaloneDialogDemo.exe"
 
 $filesToSign = New-Object System.Collections.Generic.List[string]
+
+$script:SignToolPath = $null
+$script:SignToolChecked = $false
+$script:SignToolWarned = $false
+
+function Resolve-SignToolPath {
+    if ($script:SignToolChecked) {
+        return $script:SignToolPath
+    }
+
+    $script:SignToolChecked = $true
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+
+    $commandLookup = Get-Command "signtool.exe" -ErrorAction SilentlyContinue
+    if ($commandLookup) {
+        $candidates.Add($commandLookup.Source) | Out-Null
+    }
+
+    foreach ($envVar in @("SIGNTOOL_PATH", "SIGNTOOL")) {
+        $value = [Environment]::GetEnvironmentVariable($envVar)
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            if (Test-Path $value -PathType Leaf) {
+                $candidates.Add((Resolve-Path $value).Path) | Out-Null
+            } elseif (Test-Path $value -PathType Container) {
+                $exeCandidate = Join-Path $value "signtool.exe"
+                if (Test-Path $exeCandidate) {
+                    $candidates.Add((Resolve-Path $exeCandidate).Path) | Out-Null
+                }
+            }
+        }
+    }
+
+    $kitRoots = @()
+    if ($env:ProgramFiles) {
+        $kitRoots += Join-Path $env:ProgramFiles "Windows Kits\10\bin"
+    }
+    if (${env:ProgramFiles(x86)}) {
+        $kitRoots += Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+    }
+
+    foreach ($kitRoot in $kitRoots | Where-Object { Test-Path $_ }) {
+        $versions = Get-ChildItem -Path $kitRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending
+        foreach ($versionDir in $versions) {
+            foreach ($arch in @("x64", "arm64", "x86")) {
+                $exePath = Join-Path $versionDir.FullName "$arch\signtool.exe"
+                if (Test-Path $exePath) {
+                    $candidates.Add((Resolve-Path $exePath).Path) | Out-Null
+                }
+            }
+        }
+    }
+
+    if ($candidates.Count -gt 0) {
+        $script:SignToolPath = $candidates | Select-Object -First 1
+    }
+
+    return $script:SignToolPath
+}
+
+function Invoke-CodeSign {
+    param(
+        [string]$TargetFile,
+        [string]$CertificateName,
+        [string]$TimestampUrl,
+        [int]$MaxAttempts = 4
+    )
+
+    $resolvedPath = Resolve-SignToolPath
+    if (-not $resolvedPath) {
+        if (-not $script:SignToolWarned) {
+            Write-Warning "Skipping signing because signtool.exe was not found. Install the Windows 10/11 SDK or set SIGNTOOL_PATH to the executable."
+            $script:SignToolWarned = $true
+        }
+        Write-Host "Skipping: $TargetFile" -ForegroundColor Yellow
+        return $false
+    }
+
+    # Verify file exists and is accessible
+    if (-not (Test-Path $TargetFile)) {
+        Write-Warning "File not found for signing: $TargetFile"
+        return $false
+    }
+
+    # Check if file is locked and attempt to unlock
+    try {
+        $fileStream = [System.IO.File]::Open($TargetFile, 'Open', 'Read', 'None')
+        $fileStream.Close()
+    }
+    catch {
+        Write-Warning "File appears to be locked: $TargetFile. Attempting unlock..."
+        
+        # Multiple attempts with garbage collection
+        $unlockAttempts = 3
+        for ($attempt = 1; $attempt -le $unlockAttempts; $attempt++) {
+            Start-Sleep -Seconds ($attempt * 2)
+            
+            # Force garbage collection to release file handles
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            [System.GC]::Collect()
+            [System.GC]::WaitForPendingFinalizers()
+            
+            try {
+                $fileStream = [System.IO.File]::Open($TargetFile, 'Open', 'Read', 'None')
+                $fileStream.Close()
+                Write-Host "File unlocked after $attempt attempts: $TargetFile" -ForegroundColor Yellow
+                break
+            }
+            catch {
+                if ($attempt -eq $unlockAttempts) {
+                    Write-Warning "File still locked after $unlockAttempts attempts: $TargetFile. Skipping signing."
+                    return $false
+                }
+            }
+        }
+    }
+
+    # Multiple timestamp servers for redundancy
+    $tsas = @(
+        'http://timestamp.digicert.com',
+        'http://timestamp.sectigo.com',
+        'http://timestamp.entrust.net/TSS/RFC3161sha2TS'
+    )
+
+    $attempt = 0
+    $signed = $false
+    while ($attempt -lt $MaxAttempts -and -not $signed) {
+        $attempt++
+        foreach ($tsa in $tsas) {
+            try {
+                & $resolvedPath sign /fd SHA256 /n $CertificateName /tr $tsa /td SHA256 $TargetFile 2>&1 | Out-Null
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "✓ Successfully signed: $TargetFile" -ForegroundColor Green
+                    $signed = $true
+                    break
+                }
+            }
+            catch {
+                # Continue to next TSA
+            }
+            
+            if (-not $signed) {
+                Start-Sleep -Seconds (2 * $attempt)
+            }
+        }
+    }
+
+    if (-not $signed) {
+        Write-Warning "Failed to sign after $MaxAttempts attempts: $TargetFile"
+        return $false
+    }
+    
+    return $true
+}
 
 function Add-FileToSign {
     param([string]$Path)
@@ -75,7 +242,7 @@ function Publish-CliOutput {
     }
 
     Write-Host "Publishing csharpDialog CLI for packaging ($Runtime) with version $BuildVersion..." -ForegroundColor Green
-    & dotnet publish $cliProject -c $Configuration -r $Runtime --self-contained:$true /p:PublishSingleFile=false /p:Version=$BuildVersion
+    & dotnet publish $cliProject -c $Configuration -r $Runtime --self-contained:$true /p:PublishSingleFile=false /p:Version=$BuildVersion -o $PublishDirectory
     if ($LASTEXITCODE -ne 0) {
         throw "dotnet publish failed for runtime $Runtime."
     }
@@ -88,16 +255,7 @@ function Publish-CliOutput {
 
         Get-ChildItem -Path $PublishDirectory -Filter "*.exe" | ForEach-Object {
             Write-Host "Signing published executable: $($_.Name)" -ForegroundColor Cyan
-            try {
-                & signtool sign /fd SHA256 /n $certificateName /t $timestampUrl $_.FullName
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "✓ Successfully signed: $($_.Name)" -ForegroundColor Green
-                } else {
-                    Write-Warning "Failed to sign: $($_.Name)"
-                }
-            } catch {
-                Write-Warning "Could not sign $($_.FullName): $($_.Exception.Message)"
-            }
+            Invoke-CodeSign -TargetFile $_.FullName -CertificateName $certificateName -TimestampUrl $timestampUrl
         }
     }
 }
@@ -405,9 +563,18 @@ if ($Build) {
     }
 
     Add-FileToSign $cliExe
+    Add-FileToSign $dialogExe
     Add-FileToSign $wpfExe
     Add-FileToSign $testExe
     Add-FileToSign $demoExe
+    
+    # Force garbage collection after build to release file handles before signing
+    Write-Host "Releasing file handles before signing..." -ForegroundColor Gray
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    Start-Sleep -Seconds 2
 }
 
 $runtimeList = @()
@@ -469,17 +636,7 @@ if ($Sign -and $filesToSign.Count -gt 0) {
 
     foreach ($file in $filesToSign | Sort-Object -Unique) {
         Write-Host "Signing: $file" -ForegroundColor Cyan
-        try {
-            & signtool sign /fd SHA256 /n $certificateName /t $timestampUrl $file
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "✓ Successfully signed: $file" -ForegroundColor Green
-            } else {
-                Write-Warning "Failed to sign: $file"
-            }
-        } catch {
-            Write-Warning "Could not sign $file`: $($_.Exception.Message)"
-            Write-Host "Note: Signing requires signtool.exe and the enterprise certificate to be available." -ForegroundColor Yellow
-        }
+        Invoke-CodeSign -TargetFile $file -CertificateName $certificateName -TimestampUrl $timestampUrl
     }
 } elseif ($Sign) {
     Write-Warning "Sign flag specified but no files were available to sign."
