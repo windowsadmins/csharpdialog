@@ -88,63 +88,234 @@ csharpdialog --title "Auto-close" --message "This will close in 10 seconds" --ti
 
 ## Command Line Options
 
+### Basic Flags
 | Option | Description | Example |
 |--------|-------------|---------|
-| `--title`, `-t` | Set dialog title | `--title "My Title"` |
-| `--message`, `-m` | Set dialog message | `--message "Hello World"` |
+| `--title` | Window title | `--title "Hello World"` |
+| `--message` | Main message content | `--message "Welcome to csharpDialog"` |
+| `--button1text` | Primary button label | `--button1text "OK"` |
+| `--button2text` | Secondary button label | `--button2text "Cancel"` |
 | `--icon`, `-i` | Set dialog icon | `--icon "path/to/icon.png"` |
-| `--button1` | Set first button text | `--button1 "OK"` |
-| `--button2` | Set second button text | `--button2 "Cancel"` |
-| `--timeout` | Auto-close after seconds | `--timeout 30` |
-| `--width` | Set dialog width | `--width 500` |
-| `--height` | Set dialog height | `--height 300` |
+| `--help`, `-h` | Show help message | `--help` |
+
+### Progress & Status
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--progressbar` | Enable progress bar | `--progressbar` |
+| `--progress` | Set progress percentage (0-100) | `--progress 50` |
+| `--progresstext` | Progress description text | `--progresstext "Step 2 of 4"` |
+
+### List Items
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--listitem` | Add list item with status | `--listitem "Item Name,status"` |
+| | Status values: `none`, `wait`, `pending`, `success`, `fail`, `error` | `--listitem "Chrome,success"` |
+
+### Display Modes
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--fullscreen` | Fullscreen with blurred background | `--fullscreen` |
+| `--kiosk` | Kiosk mode (fullscreen, cannot close) | `--kiosk` |
+| `--width` | Set window width (default: 750) | `--width 800` |
+| `--height` | Set window height (default: 1000) | `--height 1200` |
 | `--centeronscreen` | Center dialog on screen | `--centeronscreen` |
 | `--topmost` | Keep dialog on top | `--topmost` |
+
+### Command File
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--commandfile` | Enable live updates via command file | `--commandfile "C:\temp\commands.txt"` |
+
+### Styling (Legacy)
+| Option | Description | Example |
+|--------|-------------|---------|
 | `--backgroundcolor` | Set background color | `--backgroundcolor "#ffffff"` |
 | `--textcolor` | Set text color | `--textcolor "#000000"` |
 | `--fontfamily` | Set font family | `--fontfamily "Arial"` |
 | `--fontsize` | Set font size | `--fontsize 12` |
-| `--markdown` | Enable markdown in message | `--markdown` |
-| `--image` | Display image | `--image "path/to/image.jpg"` |
-| `--video` | Display video | `--video "path/to/video.mp4"` |
-| `--help`, `-h` | Show help message | `--help` |
+| `--timeout` | Auto-close after seconds | `--timeout 30` |
+
+## Quick Reference
+
+### Common Command Patterns
+
+#### Basic Dialog
+```powershell
+dialog --title "Title" --message "Message" --button1text "OK"
+```
+
+#### Progress Dialog
+```powershell
+dialog --title "Processing" --message "Please wait..." --progressbar --progress 50 --progresstext "Step 2 of 4"
+```
+
+#### List Items
+```powershell
+dialog --title "Status" --listitem "Item 1,success" --listitem "Item 2,pending" --listitem "Item 3,wait"
+```
+
+#### Fullscreen with Blur
+```powershell
+dialog --fullscreen --title "Important" --message "Fullscreen with Windows 11 blur effect"
+```
+
+#### Kiosk Mode (Cannot Close)
+```powershell
+dialog --kiosk --commandfile "C:\temp\commands.txt" --title "Critical Process"
+```
+
+### Command File Syntax
+
+Command files enable real-time updates to dialogs during long-running operations.
+
+#### Add List Item
+```
+listitem: add, title: Item Name, status: pending, statustext: In progress...
+```
+
+#### Update List Item
+```
+listitem: update, title: Item Name, status: success, statustext: Complete!
+```
+
+#### Update Progress
+```
+progress: 75
+progresstext: Processing step 3 of 4...
+```
+
+#### Update UI Elements
+```
+title: New Title
+message: Updated message
+button1text: Continue
+```
+
+#### Close Dialog
+```
+quit
+```
+
+### Status Values
+
+- `none` - No indicator
+- `wait` - Orange circle (waiting)
+- `pending` - Blue spinning indicator (in progress)
+- `success` - Green checkmark (completed)
+- `fail` - Red X (failed)
+- `error` - Red exclamation (error)
+
+### Exit Codes
+
+- `0` - Button 1 clicked (primary action)
+- `2` - Button 2 clicked (secondary action)
+- `1` - Error or window closed
+
+### Tips & Best Practices
+
+#### Using Command Files
+Always start your command file process in a separate thread:
+```powershell
+$process = Start-Process dialog -ArgumentList @("--commandfile", $file) -PassThru -NoNewWindow
+```
+
+#### Fullscreen vs Kiosk
+- **Fullscreen**: User can close, shows blurred background
+- **Kiosk**: User CANNOT close, requires `quit` command, shows blurred background
+
+#### List Item Updates
+Match the `title` exactly when updating:
+```powershell
+Add-Content $file "listitem: add, title: My App, status: wait"
+# Later...
+Add-Content $file "listitem: update, title: My App, status: success"  # Must match "My App"
+```
+
+#### Progress Bar Updates
+Set progress first, then progresstext:
+```powershell
+Add-Content $file "progress: 50"
+Add-Content $file "progresstext: Halfway done..."
+```
+
+#### Window Sizing
+Default height is 1000px (tall), default width is 750px:
+```powershell
+dialog --width 900 --height 1200  # Custom size
+```
+
+### Common Patterns
+
+#### Installation Tracker
+```powershell
+# Start
+Add-Content $file "listitem: add, title: App Name, status: pending"
+Add-Content $file "progresstext: Installing App Name..."
+
+# Complete
+Add-Content $file "listitem: update, title: App Name, status: success"
+Add-Content $file "progress: $percent"
+```
+
+#### Multi-Stage Process
+```powershell
+$stages = @("Stage 1", "Stage 2", "Stage 3")
+foreach ($stage in $stages) {
+    Add-Content $file "listitem: add, title: $stage, status: pending"
+    # Do work...
+    Add-Content $file "listitem: update, title: $stage, status: success"
+}
+```
+
+#### Error Handling
+```powershell
+try {
+    # Do something
+    Add-Content $file "listitem: update, title: Task, status: success"
+} catch {
+    Add-Content $file "listitem: update, title: Task, status: error, statustext: $($_.Exception.Message)"
+}
+```
 
 ## Examples
 
-### Administrative Scripts
+The `examples` directory contains complete working scripts demonstrating various features:
 
-```bash
-# Software installation confirmation
-csharpdialog --title "Software Installation" \
-  --message "Install Microsoft Office 365?" \
-  --icon "C:\Windows\System32\msiexec.exe" \
-  --button1 "Install" \
-  --button2 "Cancel" \
-  --topmost
+### Basic Usage
+- **basic-message.ps1** - Simple message dialog with title and button
+- **progress-bar.ps1** - Progress bar with incremental updates
+- **list-items.ps1** - Display list items with status indicators
+- **button-actions.ps1** - Multiple buttons with different actions
+- **custom-sizing.ps1** - Different window sizes
 
-# System maintenance notification
-csharpdialog --title "System Maintenance" \
-  --message "System will restart in 5 minutes for updates." \
-  --timeout 300 \
-  --centeronscreen
+### Interactive Features
+- **command-file-demo.ps1** - Live updates using command file
+
+### Advanced Scenarios
+- **fullscreen-mode.ps1** - Fullscreen with blurred background
+- **kiosk-mode.ps1** - Locked fullscreen for critical operations
+- **software-install.ps1** - Software installation progress tracker
+- **onboarding-workflow.ps1** - Complete user onboarding experience
+
+### Specific Use Cases
+- **first-run-setup.ps1** - Initial device setup wizard
+- **maintenance-mode.ps1** - System maintenance notification
+- **policy-enforcement.ps1** - Compliance policy reminder
+- **update-notification.ps1** - Software update prompt
+
+### Running Examples
+
+All examples assume csharpDialog is installed at `C:\Program Files\csharpDialog\dialog.exe`.
+
+Run any example with PowerShell:
+```powershell
+.\examples\basic-message.ps1
 ```
 
-### User Notifications
-
-```bash
-# Welcome message with custom branding
-csharpdialog --title "Welcome to Company Portal" \
-  --message "Please follow the setup instructions." \
-  --image "C:\Company\logo.png" \
-  --backgroundcolor "#0078d4" \
-  --textcolor "#ffffff"
+Or with elevated privileges (for system-level operations):
+```powershell
+sudo pwsh .\examples\kiosk-mode.ps1
 ```
-
-## Exit Codes
-
-- `0`: Success (OK or first button clicked)
-- `1`: Cancel or second button clicked
-- `1`: Error occurred
 
 ## Development
 
@@ -210,25 +381,24 @@ See [Cimian Integration Guide](docs/Cimian-Integration.md) for detailed setup in
 
 ## Application Icons
 
-csharpDialog uses a **repository-based icon system** similar to Munki on macOS. Icons are deployment assets hosted in your Cimian repository, not extracted from installed applications.
+csharpDialog supports displaying application icons in list items. Icons can be loaded from local file paths or URLs.
 
-### Key Features
+### Icon Support
 
-- 📦 **Repository hosted**: Icons stored alongside packages in deployment repo
-- ⚡ **Cached locally**: Downloaded once, instant loading thereafter
-- 🎨 **Available before install**: Show app icons during installation progress
-- 🔄 **Automatic fallbacks**: Generic icons when specific icons unavailable
+- **Repository hosted**: Icons stored alongside packages in deployment repo
+- **Cached locally**: Downloaded once, instant loading thereafter
+- **Available before install**: Show app icons during installation progress
+- **Automatic fallbacks**: Generic icons when specific icons unavailable
 
-### Quick Example
+### Icon Usage
 
-```bash
-# Icon from deployment repository (recommended)
-csharpdialog --listitem "title=Chrome,icon_url=https://cimian.company.com/icons/chrome.png"
+Icons are specified as the third parameter in list items:
+```powershell
+# With icon file path
+dialog --listitem "Chrome,success,C:\ProgramData\ManagedInstalls\icons\chrome.png"
 
-# Icon with base URL (cleaner)
-csharpdialog --icon-base-url "https://cimian.company.com/icons/" \
-  --listitem "title=Chrome,icon=chrome.png" \
-  --listitem "title=Zoom,icon=zoom.png"
+# Without icon
+dialog --listitem "Chrome,success"
 ```
 
 For complete documentation on icon management, extraction, and best practices, see [Icon Management Guide](docs/Icon-Management.md).
@@ -263,4 +433,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-*csharpDialog - Bringing elegant dialog boxes to Windows*
+*csharpDialog - elegant dialog boxes for Windows*
