@@ -119,6 +119,160 @@ csharpDialog uses multiple methods to detect first-run scenarios:
 
 ## Cimian Integration
 
+### Script-Only Manifest Item Example
+
+You can run csharpDialog as part of a Cimian *script-only* item so progress is shown while `managedsoftwareupdate` installs other packages. The example below mirrors Cimian's repository layout (`/cache`, `/logs`, etc.) and is ready to be dropped into `deployment/pkgsinfo/scripts/` as a PowerShell script.
+
+```powershell
+#Requires -Version 5.1
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory=$true)][string]$ManifestName,
+  [string[]]$TargetItems = @("FortiClient", "Teams", "Zoom"),
+  [switch]$VerboseDialog
+)
+
+$managedRoot   = "C:\ProgramData\ManagedInstalls"
+$logDir        = Join-Path $managedRoot "Logs"
+$cacheDir      = Join-Path $managedRoot "Cache\csharpDialog"
+$commandFile   = Join-Path $cacheDir "install-progress.txt"
+$dialogExe     = "C:\Program Files\csharpDialog\dialog.exe"
+$msuExe        = "C:\Program Files\Cimian\managedsoftwareupdate.exe"
+$logPath       = Join-Path $logDir "csharpDialog-progress-$($ManifestName).log"
+
+New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+Remove-Item $commandFile -Force -ErrorAction SilentlyContinue
+
+if (-not (Test-Path $dialogExe)) {
+  throw "csharpDialog not found at $dialogExe"
+}
+if (-not (Test-Path $msuExe)) {
+  throw "managedsoftwareupdate.exe not found at $msuExe"
+}
+
+function Write-Log([string]$Message) {
+  $timestamp = (Get-Date).ToString("s")
+  $line = "[$timestamp] $Message"
+  $line | Tee-Object -FilePath $logPath -Append | Out-Null
+}
+
+# Discover pending items from Cimian so we do not hard-code lists
+$checkArgs = @("--manifest", $ManifestName, "--checkonly")
+$checkResult = & $msuExe @checkArgs 2>&1
+if ($LASTEXITCODE -ne 0) {
+  Write-Log "managedsoftwareupdate --checkonly failed ($LASTEXITCODE). Output:`n$checkResult"
+  throw "Unable to query Cimian manifest"
+}
+
+$managedTable = @()
+$capture = $false
+foreach ($line in $checkResult) {
+  if ($line -match '^\s*MANAGED INSTALLS') { $capture = $true; continue }
+  if ($capture -and $line -match '^[-\s]+$') { continue }
+  if ($capture -and [string]::IsNullOrWhiteSpace($line)) { break }
+  if ($capture) {
+    if ($line -match '^\s*(?<name>[^|]+?)\s*\|\s*(?<version>[^|]+?)\s*\|\s*(?<status>.+?)\s*$') {
+      $managedTable += [pscustomobject]@{
+        Name    = ($matches['name']).Trim()
+        Version = ($matches['version']).Trim()
+        Status  = ($matches['status']).Trim()
+      }
+    }
+  }
+}
+
+if ($managedTable.Count -eq 0) {
+  Write-Log "No managed install rows were detected in manifest output"
+}
+
+$itemsToProcess = if ($TargetItems) {
+  $managedTable | Where-Object { $TargetItems -contains $_.Name }
+} else {
+  $managedTable
+}
+
+if ($itemsToProcess.Count -eq 0) {
+  Write-Log "Nothing to process for manifest $ManifestName"
+  return 0
+}
+
+$dialogArgs = @(
+  "--commandfile", "`"$commandFile`"",
+  "--title", "`"Installing Required Software`"",
+  "--message", "`"Your device is being configured. Please keep this window open.`"",
+  "--progressbar"
+)
+if ($VerboseDialog) { $dialogArgs += "--debug" }
+
+Write-Log "Launching csharpDialog ($dialogExe)"
+$dialogProcess = Start-Process -FilePath $dialogExe -ArgumentList $dialogArgs -PassThru
+Start-Sleep -Seconds 2
+
+foreach ($row in $itemsToProcess) {
+  Add-Content -Path $commandFile -Value "listitem: add, title: $($row.Name), status: pending, statustext: Waiting..." -Encoding UTF8
+}
+
+Add-Content -Path $commandFile -Value "progress: 0" -Encoding UTF8
+Add-Content -Path $commandFile -Value "progresstext: Preparing to install $($itemsToProcess.Count) items" -Encoding UTF8
+
+for ($index = 0; $index -lt $itemsToProcess.Count; $index++) {
+  $item = $itemsToProcess[$index]
+  $step = $index + 1
+  $percent = [math]::Round(($step / $itemsToProcess.Count) * 100)
+
+  Write-Log "Installing $($item.Name) via Cimian"
+  Add-Content $commandFile "listitem: update, title: $($item.Name), status: wait, statustext: Installing..." -Encoding UTF8
+  Add-Content $commandFile "progresstext: Installing $($item.Name) ($step of $($itemsToProcess.Count))..." -Encoding UTF8
+
+  $installArgs = @("--item", $item.Name, "--installonly", "--manifest", $ManifestName, "--verbose")
+  $installOutput = & $msuExe @installArgs 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    Add-Content $commandFile "listitem: update, title: $($item.Name), status: success, statustext: Installed" -Encoding UTF8
+    Write-Log "SUCCESS $($item.Name)`n$installOutput"
+  }
+  else {
+    Add-Content $commandFile "listitem: update, title: $($item.Name), status: fail, statustext: Failed (Exit: $LASTEXITCODE)" -Encoding UTF8
+    Write-Log "FAIL $($item.Name) exit $LASTEXITCODE`n$installOutput"
+  }
+
+  Add-Content $commandFile "progress: $percent" -Encoding UTF8
+}
+
+Add-Content $commandFile "progresstext: Installation run complete." -Encoding UTF8
+Add-Content $commandFile "progress: 100" -Encoding UTF8
+Start-Sleep -Seconds 5
+Add-Content $commandFile "quit" -Encoding UTF8
+
+Write-Log "Waiting for dialog to exit"
+Wait-Process -Id $dialogProcess.Id -Timeout 15 -ErrorAction SilentlyContinue
+
+Remove-Item $commandFile -Force -ErrorAction SilentlyContinue
+Write-Log "Complete"
+return 0
+```
+
+**Packaging notes**
+
+- Place the script within your Cimian repository (for example `deployment/pkgsinfo/scripts/csharpDialog-Progress.ps1`).
+- Define a script-only item that calls the script with arguments similar to:
+
+```yaml
+name: csharpDialog-manifest-progress
+display_name: Run csharpDialog progress UI
+installer:
+  type: script
+  path: pkgsinfo/scripts/csharpDialog-Progress.ps1
+  arguments:
+  - "--ManifestName"
+  - "ProvisioningStaff"
+  - "--TargetItems"
+  - "FortiClient,Teams,Zoom"
+```
+
+- Cimian will place the script inside the managed installer sandbox where `/cache` and `/logs` map to `C:\ProgramData\ManagedInstalls\Cache` and `...\Logs` respectively; this example mirrors that layout so cleanup/rotation keep working.
+- All activity is logged to `C:\ProgramData\ManagedInstalls\Logs\csharpDialog-progress-<manifest>.log` and the command file lives under `...\Cache\csharpDialog\` for easy troubleshooting.
+
 ### Log Monitoring
 
 csharpDialog monitors the Cimian log file at:
