@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
 
@@ -11,6 +13,13 @@ namespace csharpDialog.WPF
     public partial class ProgressDialogWindow : Window
     {
         private bool _isDarkMode;
+
+        // Win32 API for dark mode title bar
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 
         public ProgressDialogWindow()
         {
@@ -25,7 +34,30 @@ namespace csharpDialog.WPF
             this.Loaded += (s, e) =>
             {
                 ApplyTheme(_isDarkMode);
+                SetDarkModeTitleBar(_isDarkMode);
             };
+        }
+
+        private void SetDarkModeTitleBar(bool isDarkMode)
+        {
+            try
+            {
+                var hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd == IntPtr.Zero)
+                    return;
+
+                int useImmersiveDarkMode = isDarkMode ? 1 : 0;
+                
+                // Try Windows 10 20H1+ first
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref useImmersiveDarkMode, sizeof(int));
+                
+                // Fallback for older Windows 10 versions
+                DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref useImmersiveDarkMode, sizeof(int));
+            }
+            catch
+            {
+                // Ignore errors - title bar will remain light
+            }
         }
 
         private bool IsSystemDarkMode()

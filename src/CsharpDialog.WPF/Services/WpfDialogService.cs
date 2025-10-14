@@ -79,6 +79,44 @@ namespace csharpDialog.WPF.Services
                         var childCount = listItemsPanel.Children.Count;
                         listItemsPanel.Children.Clear();
                         Console.WriteLine($"[DEBUG] Cleared {childCount} sample items from ListItemsPanel");
+                        
+                        // Add initial list items from configuration
+                        if (configuration.ListItems != null && configuration.ListItems.Count > 0)
+                        {
+                            Console.WriteLine($"[DEBUG] Adding {configuration.ListItems.Count} initial list items from configuration");
+                            foreach (var item in configuration.ListItems)
+                            {
+                                var listItem = new ListItemControl(item.Title, _nextListItemIndex, _isDarkMode);
+                                
+                                // Set icon if provided
+                                if (!string.IsNullOrEmpty(item.Icon))
+                                {
+                                    listItem.SetIcon(item.Icon);
+                                    Console.WriteLine($"[DEBUG]   Icon set: {item.Icon}");
+                                }
+                                
+                                // Set initial status
+                                if (item.Status != ListItemStatus.None)
+                                {
+                                    listItem.UpdateStatus(item.Status.ToString().ToLower());
+                                }
+                                
+                                if (!string.IsNullOrEmpty(item.StatusText))
+                                {
+                                    listItem.UpdateStatusText(item.StatusText);
+                                }
+                                
+                                // Add to tracking dictionary
+                                _listItems[item.Title] = listItem;
+                                
+                                // Add to UI
+                                listItemsPanel.Children.Add(listItem.Element);
+                                Console.WriteLine($"[DEBUG]   Added: {item.Title} [status: {item.Status}]");
+                                
+                                _nextListItemIndex++;
+                            }
+                            Console.WriteLine($"[DEBUG] ✓ All initial list items added to UI");
+                        }
                     }
                     
                     Console.WriteLine($"[DEBUG] Window loaded and ready for commands");
@@ -578,8 +616,14 @@ namespace csharpDialog.WPF.Services
         public int Index { get; }
         private readonly TextBlock _titleText;
         private readonly TextBlock _statusText;
+        private readonly Grid _iconContainer;
+        private readonly Image _iconImage;
         private readonly Ellipse _statusIcon;
+        private readonly Ellipse _spinnerOuter;
+        private readonly Ellipse _spinnerInner;
+        private readonly Grid _grid;
         private readonly bool _isDarkMode;
+        private System.Windows.Media.Animation.Storyboard? _spinAnimation;
 
         public ListItemControl(string title, int index, bool isDarkMode = false)
         {
@@ -587,72 +631,212 @@ namespace csharpDialog.WPF.Services
             _isDarkMode = isDarkMode;
 
             // Create the UI element
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            _grid = new Grid();
+            _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            _grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            // Status icon (circle)
-            _statusIcon = new Ellipse
+            // Icon/Status container - holds either app icon or status indicator
+            _iconContainer = new Grid
             {
-                Width = 16,
-                Height = 16,
-                Fill = new SolidColorBrush(Colors.Gray),
-                Margin = new Thickness(0, 0, 12, 0),
+                Width = 32,
+                Height = 32,
+                Margin = new Thickness(0, 0, 16, 0),
                 VerticalAlignment = VerticalAlignment.Center
             };
-            Grid.SetColumn(_statusIcon, 0);
-            grid.Children.Add(_statusIcon);
+            Grid.SetColumn(_iconContainer, 0);
+            _grid.Children.Add(_iconContainer);
+
+            // App icon (image) - hidden by default, shown when icon is set
+            _iconImage = new Image
+            {
+                Width = 32,
+                Height = 32,
+                Visibility = Visibility.Collapsed,
+                Stretch = System.Windows.Media.Stretch.Uniform
+            };
+            _iconContainer.Children.Add(_iconImage);
+
+            // Status icon (circle) - shown when no app icon
+            _statusIcon = new Ellipse
+            {
+                Width = 20,
+                Height = 20,
+                Fill = new SolidColorBrush(Colors.Gray),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _iconContainer.Children.Add(_statusIcon);
+
+            // Spinner for pending/progress status
+            _spinnerOuter = new Ellipse
+            {
+                Width = 28,
+                Height = 28,
+                Stroke = new SolidColorBrush(Color.FromArgb(40, 0, 120, 212)),
+                StrokeThickness = 3,
+                Visibility = Visibility.Collapsed,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _iconContainer.Children.Add(_spinnerOuter);
+
+            _spinnerInner = new Ellipse
+            {
+                Width = 28,
+                Height = 28,
+                Stroke = new SolidColorBrush(Color.FromRgb(0, 120, 212)),
+                StrokeThickness = 3,
+                StrokeDashArray = new DoubleCollection { 15, 25 },
+                Visibility = Visibility.Collapsed,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                RenderTransformOrigin = new Point(0.5, 0.5)
+            };
+            _spinnerInner.RenderTransform = new RotateTransform(0);
+            _iconContainer.Children.Add(_spinnerInner);
 
             // Title - theme aware
             _titleText = new TextBlock
             {
                 Text = title,
-                FontSize = 14,
+                FontSize = 15,
                 FontWeight = FontWeights.Medium,
                 Foreground = new SolidColorBrush(_isDarkMode ? Color.FromRgb(240, 240, 240) : Color.FromRgb(51, 51, 51)),
                 VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetColumn(_titleText, 1);
-            grid.Children.Add(_titleText);
+            _grid.Children.Add(_titleText);
 
             // Status text - theme aware
             _statusText = new TextBlock
             {
                 Text = "Pending",
-                FontSize = 12,
+                FontSize = 13,
                 Foreground = new SolidColorBrush(_isDarkMode ? Color.FromRgb(180, 180, 180) : Color.FromRgb(102, 102, 102)),
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(12, 0, 0, 0)
+                Margin = new Thickness(16, 0, 0, 0)
             };
             Grid.SetColumn(_statusText, 2);
-            grid.Children.Add(_statusText);
+            _grid.Children.Add(_statusText);
 
-            // Border container - theme aware with standard Windows styling
+            // Border container - theme aware with improved spacing
             Element = new Border
             {
                 Background = new SolidColorBrush(_isDarkMode ? Color.FromRgb(40, 40, 40) : Color.FromRgb(250, 250, 250)),
                 BorderBrush = new SolidColorBrush(_isDarkMode ? Color.FromRgb(60, 60, 60) : Color.FromRgb(220, 220, 220)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(2),
-                Margin = new Thickness(0, 0, 0, 6),
-                Padding = new Thickness(12, 10, 12, 10),
-                Child = grid
+                CornerRadius = new CornerRadius(4),
+                Margin = new Thickness(0, 0, 0, 8),
+                Padding = new Thickness(16, 14, 16, 14),
+                Child = _grid
             };
+        }
+
+        public void SetIcon(string iconPath)
+        {
+            try
+            {
+                // Check if icon file exists
+                if (System.IO.File.Exists(iconPath))
+                {
+                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    bitmap.UriSource = new Uri(iconPath, UriKind.Absolute);
+                    bitmap.EndInit();
+                    
+                    _iconImage.Source = bitmap;
+                    _iconImage.Visibility = Visibility.Visible;
+                    _statusIcon.Visibility = Visibility.Collapsed;
+                }
+            }
+            catch
+            {
+                // If icon fails to load, keep using status icon
+            }
         }
 
         public void UpdateStatus(string status)
         {
-            Color color = status.ToLowerInvariant() switch
+            var lowerStatus = status.ToLowerInvariant();
+            
+            // Stop any existing animation
+            StopSpinAnimation();
+            
+            // Update status color and animation
+            switch (lowerStatus)
             {
-                "success" => Colors.Green,
-                "wait" => Colors.Orange,
-                "fail" => Colors.Red,
-                "error" => Colors.Red,
-                _ => Colors.Gray
-            };
+                case "success":
+                    _statusIcon.Fill = new SolidColorBrush(Colors.Green);
+                    _statusIcon.Visibility = _iconImage.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                    _spinnerOuter.Visibility = Visibility.Collapsed;
+                    _spinnerInner.Visibility = Visibility.Collapsed;
+                    break;
+                    
+                case "pending":
+                case "progress":
+                    // Show spinner animation for pending/progress
+                    _statusIcon.Visibility = Visibility.Collapsed;
+                    _spinnerOuter.Visibility = Visibility.Visible;
+                    _spinnerInner.Visibility = Visibility.Visible;
+                    StartSpinAnimation();
+                    break;
+                    
+                case "wait":
+                    _statusIcon.Fill = new SolidColorBrush(Colors.Orange);
+                    _statusIcon.Visibility = _iconImage.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                    _spinnerOuter.Visibility = Visibility.Collapsed;
+                    _spinnerInner.Visibility = Visibility.Collapsed;
+                    break;
+                    
+                case "fail":
+                case "error":
+                    _statusIcon.Fill = new SolidColorBrush(Colors.Red);
+                    _statusIcon.Visibility = _iconImage.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                    _spinnerOuter.Visibility = Visibility.Collapsed;
+                    _spinnerInner.Visibility = Visibility.Collapsed;
+                    break;
+                    
+                default:
+                    _statusIcon.Fill = new SolidColorBrush(Colors.Gray);
+                    _statusIcon.Visibility = _iconImage.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+                    _spinnerOuter.Visibility = Visibility.Collapsed;
+                    _spinnerInner.Visibility = Visibility.Collapsed;
+                    break;
+            }
+        }
 
-            _statusIcon.Fill = new SolidColorBrush(color);
+        private void StartSpinAnimation()
+        {
+            if (_spinAnimation != null)
+                return;
+
+            var rotateTransform = (RotateTransform)_spinnerInner.RenderTransform;
+            _spinAnimation = new System.Windows.Media.Animation.Storyboard();
+            
+            var animation = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                From = 0,
+                To = 360,
+                Duration = new Duration(TimeSpan.FromSeconds(1.5)),
+                RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
+            };
+            
+            System.Windows.Media.Animation.Storyboard.SetTarget(animation, rotateTransform);
+            System.Windows.Media.Animation.Storyboard.SetTargetProperty(animation, new PropertyPath(RotateTransform.AngleProperty));
+            
+            _spinAnimation.Children.Add(animation);
+            _spinAnimation.Begin();
+        }
+
+        private void StopSpinAnimation()
+        {
+            if (_spinAnimation != null)
+            {
+                _spinAnimation.Stop();
+                _spinAnimation = null;
+            }
         }
 
         public void UpdateStatusText(string text)
