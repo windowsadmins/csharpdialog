@@ -605,6 +605,7 @@ namespace csharpDialog.WPF.Services
         public event EventHandler<CommandOutputEventArgs>? CommandOutputReceived;
 #pragma warning restore CS0067
         
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         private bool IsSystemDarkMode()
         {
             try
