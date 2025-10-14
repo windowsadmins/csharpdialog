@@ -197,7 +197,28 @@ public class ListItemConfiguration : INotifyPropertyChanged
 
     public ListItemConfiguration(string title) : this()
     {
-        Title = title;
+        // Parse format: "Title,status,icon" or "Title,status" or just "Title"
+        if (title.Contains(','))
+        {
+            var parts = title.Split(',', 3);
+            Title = parts[0].Trim();
+            
+            // Parse status
+            if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+            {
+                Status = StatusIconProvider.FromString(parts[1].Trim());
+            }
+            
+            // Parse icon (optional third parameter)
+            if (parts.Length > 2 && !string.IsNullOrWhiteSpace(parts[2]))
+            {
+                Icon = parts[2].Trim();
+            }
+        }
+        else
+        {
+            Title = title;
+        }
     }
 
     /// <summary>
