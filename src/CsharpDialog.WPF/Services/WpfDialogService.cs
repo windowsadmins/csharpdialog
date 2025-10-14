@@ -42,7 +42,13 @@ namespace csharpDialog.WPF.Services
                 // Detect dark mode from the window
                 _isDarkMode = IsSystemDarkMode();
                 
-                Console.WriteLine($"[DEBUG] ProgressDialogWindow created (Dark Mode: {_isDarkMode})");
+                // Check for fullscreen/kiosk mode
+                bool isFullscreen = configuration.Metadata.ContainsKey("FullscreenMode") && 
+                                   configuration.Metadata["FullscreenMode"] is bool fullscreen && fullscreen;
+                bool isKiosk = configuration.Metadata.ContainsKey("KioskMode") && 
+                              configuration.Metadata["KioskMode"] is bool kiosk && kiosk;
+                
+                Console.WriteLine($"[DEBUG] ProgressDialogWindow created (Dark Mode: {_isDarkMode}, Fullscreen: {isFullscreen}, Kiosk: {isKiosk})");
                 
                 // Apply configuration immediately for window size and title
                 if (configuration.Width > 0)
@@ -138,7 +144,33 @@ namespace csharpDialog.WPF.Services
                     Console.WriteLine($"[DEBUG] Command monitoring NOT enabled. EnableCommandFile={configuration.EnableCommandFile}, Path={configuration.CommandFilePath}");
                 }
 
-                _window.ShowDialog();
+                // Show dialog with or without fullscreen overlay
+                if (isFullscreen || isKiosk)
+                {
+                    Console.WriteLine($"[DEBUG] Showing dialog in fullscreen mode with blurred overlay");
+                    var overlay = new FullscreenOverlayWindow();
+                    overlay.HostDialog(_window);
+                    
+                    // In kiosk mode, disable close button
+                    if (isKiosk)
+                    {
+                        _window.Closing += (s, e) =>
+                        {
+                            // Prevent closing in kiosk mode unless explicitly allowed
+                            if (_window.DialogResult != true)
+                            {
+                                e.Cancel = true;
+                                Console.WriteLine($"[DEBUG] Close prevented - kiosk mode active");
+                            }
+                        };
+                    }
+                    
+                    overlay.ShowDialog();
+                }
+                else
+                {
+                    _window.ShowDialog();
+                }
             });
 
             return result;
