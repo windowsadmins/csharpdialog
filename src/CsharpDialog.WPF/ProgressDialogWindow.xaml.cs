@@ -60,6 +60,7 @@ namespace csharpDialog.WPF
             }
         }
 
+        [System.Runtime.Versioning.SupportedOSPlatform("windows")]
         private bool IsSystemDarkMode()
         {
             try
