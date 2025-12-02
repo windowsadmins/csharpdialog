@@ -160,6 +160,9 @@ namespace csharpDialog.Core
                         config.Metadata["FullscreenMode"] = true;
                         config.Topmost = true;
                         break;
+                    case "--window":
+                        config.Metadata["WindowMode"] = true;
+                        break;
                     case "--autolaunch":
                         config.Metadata["AutoLaunchFirstRun"] = true;
                         break;
@@ -215,6 +218,7 @@ namespace csharpDialog.Core
             Console.WriteLine("  --firstrun               First-run mode with progress tracking");
             Console.WriteLine("  --fullscreen             Display in fullscreen mode");
             Console.WriteLine("  --kiosk                  Kiosk mode (fullscreen, no close button)");
+            Console.WriteLine("  --window                 Force GUI window mode (no fullscreen)");
             Console.WriteLine("  --autolaunch             Auto-launch on first-run detection");
             Console.WriteLine("  --help, -h               Show this help");
             Console.WriteLine();
