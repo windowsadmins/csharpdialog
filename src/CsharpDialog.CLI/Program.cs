@@ -63,10 +63,11 @@ namespace csharpDialog.CLI
                     configuration.Topmost = true;
                 }
                 
-                // Initialize WPF if needed for fullscreen/kiosk scenarios OR command file monitoring
+                // Initialize WPF if needed for fullscreen/kiosk/window scenarios OR command file monitoring
                 bool needsWpf = configuration.Metadata.ContainsKey("FullscreenMode") ||
                                configuration.Metadata.ContainsKey("KioskMode") ||
                                configuration.Metadata.ContainsKey("FirstRunMode") ||
+                               configuration.Metadata.ContainsKey("WindowMode") ||
                                configuration.EnableCommandFile;  // WPF required for command file monitoring
                 
                 IDialogService dialogService;

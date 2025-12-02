@@ -42,13 +42,22 @@ namespace csharpDialog.WPF.Services
                 // Detect dark mode from the window
                 _isDarkMode = IsSystemDarkMode();
                 
-                // Check for fullscreen/kiosk mode
+                // Check for fullscreen/kiosk/window mode
                 bool isFullscreen = configuration.Metadata.ContainsKey("FullscreenMode") && 
                                    configuration.Metadata["FullscreenMode"] is bool fullscreen && fullscreen;
                 bool isKiosk = configuration.Metadata.ContainsKey("KioskMode") && 
                               configuration.Metadata["KioskMode"] is bool kiosk && kiosk;
+                bool isWindowMode = configuration.Metadata.ContainsKey("WindowMode") && 
+                              configuration.Metadata["WindowMode"] is bool windowMode && windowMode;
                 
-                Console.WriteLine($"[DEBUG] ProgressDialogWindow created (Dark Mode: {_isDarkMode}, Fullscreen: {isFullscreen}, Kiosk: {isKiosk})");
+                // Window mode overrides fullscreen - forces WPF GUI but not fullscreen overlay
+                if (isWindowMode)
+                {
+                    isFullscreen = false;
+                    isKiosk = false;
+                }
+                
+                Console.WriteLine($"[DEBUG] ProgressDialogWindow created (Dark Mode: {_isDarkMode}, Fullscreen: {isFullscreen}, Kiosk: {isKiosk}, WindowMode: {isWindowMode})");
                 
                 // Apply configuration immediately for window size and title
                 if (configuration.Width > 0)
@@ -142,6 +151,24 @@ namespace csharpDialog.WPF.Services
                 else
                 {
                     Console.WriteLine($"[DEBUG] Command monitoring NOT enabled. EnableCommandFile={configuration.EnableCommandFile}, Path={configuration.CommandFilePath}");
+                }
+
+                // Set up timeout if configured
+                if (configuration.Timeout.HasValue && configuration.Timeout.Value > 0)
+                {
+                    Console.WriteLine($"[DEBUG] Setting up timeout: {configuration.Timeout.Value} seconds");
+                    var timeoutTimer = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromSeconds(configuration.Timeout.Value)
+                    };
+                    timeoutTimer.Tick += (s, e) =>
+                    {
+                        timeoutTimer.Stop();
+                        Console.WriteLine($"[DEBUG] Timeout reached - closing window");
+                        result.ButtonPressed = "timeout";
+                        _window.Close();
+                    };
+                    timeoutTimer.Start();
                 }
 
                 // Show dialog with or without fullscreen overlay
