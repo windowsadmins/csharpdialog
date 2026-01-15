@@ -88,6 +88,26 @@ namespace csharpDialog.WPF.Services
                     if (messageText != null && !string.IsNullOrEmpty(configuration.Message))
                         messageText.Text = configuration.Message;
 
+                    // Hide progress bar if not enabled
+                    var progressBar = _window.FindName("ProgressBarControl") as ProgressBar;
+                    var progressText = _window.FindName("ProgressText") as TextBlock;
+                    if (!configuration.ShowProgressBar)
+                    {
+                        if (progressBar != null)
+                            progressBar.Visibility = Visibility.Collapsed;
+                        if (progressText != null)
+                            progressText.Visibility = Visibility.Collapsed;
+                        Console.WriteLine($"[DEBUG] Progress bar hidden (ShowProgressBar=false)");
+                    }
+                    else
+                    {
+                        if (progressBar != null)
+                            progressBar.Visibility = Visibility.Visible;
+                        if (progressText != null)
+                            progressText.Visibility = Visibility.Visible;
+                        Console.WriteLine($"[DEBUG] Progress bar visible (ShowProgressBar=true)");
+                    }
+
                     // Clear sample items ONLY if they exist
                     if (listItemsPanel != null)
                     {
