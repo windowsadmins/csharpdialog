@@ -185,10 +185,11 @@ namespace csharpDialog.Core
         /// </summary>
         public static IDialogService CreateDialogService(DialogConfiguration? configuration = null)
         {
-            // Check if this should use WPF (fullscreen, kiosk, or first-run scenarios)
+            // Check if this should use WPF (fullscreen, kiosk, window, or first-run scenarios)
             bool useWpf = configuration?.Metadata.ContainsKey("FullscreenMode") == true ||
                          configuration?.Metadata.ContainsKey("KioskMode") == true ||
-                         configuration?.Metadata.ContainsKey("FirstRunMode") == true;
+                         configuration?.Metadata.ContainsKey("FirstRunMode") == true ||
+                         configuration?.Metadata.ContainsKey("WindowMode") == true;
             
             Console.WriteLine($"[DEBUG] CreateDialogService - useWpf: {useWpf}");
             Console.WriteLine($"[DEBUG] Platform: {Environment.OSVersion.Platform}");
