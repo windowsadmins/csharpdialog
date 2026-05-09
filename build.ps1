@@ -44,11 +44,11 @@ if (-not (Test-Path $artifactsDir)) {
     New-Item -ItemType Directory -Path $artifactsDir | Out-Null
 }
 
-$cliExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net9.0-windows\csharpDialog.CLI.exe"
-$dialogExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net9.0-windows\dialog.exe"
-$wpfExe = Join-Path $rootPath "src\csharpDialog.WPF\bin\$Configuration\net9.0-windows\csharpDialog.WPF.exe"
-$testExe = Join-Path $rootPath "src\CommandFileTest\bin\$Configuration\net9.0\CommandFileTest.exe"
-$demoExe = Join-Path $rootPath "bin\$Configuration\net9.0-windows\StandaloneDialogDemo.exe"
+$cliExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net10.0-windows\csharpDialog.CLI.exe"
+$dialogExe = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net10.0-windows\dialog.exe"
+$wpfExe = Join-Path $rootPath "src\csharpDialog.WPF\bin\$Configuration\net10.0-windows\csharpDialog.WPF.exe"
+$testExe = Join-Path $rootPath "src\CommandFileTest\bin\$Configuration\net10.0\CommandFileTest.exe"
+$demoExe = Join-Path $rootPath "bin\$Configuration\net10.0-windows\StandaloneDialogDemo.exe"
 
 $filesToSign = New-Object System.Collections.Generic.List[string]
 
@@ -598,7 +598,7 @@ Write-Host "MSI version: $msiVersion" -ForegroundColor Gray
 $msiArtifacts = @{}
 
 foreach ($runtimeOption in $runtimeList) {
-    $publishDir = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net9.0-windows\$runtimeOption\publish"
+    $publishDir = Join-Path $rootPath "src\csharpDialog.CLI\bin\$Configuration\net10.0-windows\$runtimeOption\publish"
     $arch = if ($runtimeOption -match 'x64') { 'x64' } elseif ($runtimeOption -match 'arm64') { 'arm64' } else { 'x86' }
     $msiPath = Join-Path $artifactsDir "csharpdialog-$arch-$timestamp.msi"
     $pkgPath = Join-Path $artifactsDir "csharpdialog-$arch-$timestamp.pkg"
