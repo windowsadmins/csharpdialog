@@ -21,6 +21,12 @@ namespace csharpDialog.WPF.Services
         private readonly Dictionary<string, ListItemControl> _listItems = new();
         private int _nextListItemIndex = 0;
         private bool _isDarkMode = false;
+        // True while button1 is disabled: the window refuses to close via the
+        // title-bar X or Alt+F4. The lock clears when a legitimate dismissal
+        // path sets _window.AllowClose (quit command, quit key, timeout, button
+        // click) or immediately on a runtime "button1: enable" command.
+        // swiftDialog --button1disabled parity.
+        private bool _closeLocked = false;
 
         public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
         public bool IsCommandMonitoringActive => _commandMonitor?.IsMonitoring ?? false;
@@ -68,7 +74,56 @@ namespace csharpDialog.WPF.Services
                 
                 if (!string.IsNullOrEmpty(configuration.Title))
                     _window.Title = configuration.Title;
-                
+
+                // Lock / dismissal control (swiftDialog parity). The handler is
+                // always attached because the lock can also be engaged at runtime
+                // via a "button1: disable" command-file command.
+                _closeLocked = configuration.Button1Disabled;
+                _window.Closing += (s, e) =>
+                {
+                    if (_closeLocked && !_window.AllowClose)
+                    {
+                        e.Cancel = true;
+                        Console.WriteLine($"[DEBUG] Close prevented - button1disabled lock active");
+                    }
+                };
+
+                if (configuration.HideDefaultKeyboardAction || !string.IsNullOrEmpty(configuration.QuitKey))
+                {
+                    var quitKey = configuration.QuitKey;
+                    _window.PreviewKeyDown += (s, e) =>
+                    {
+                        // Quit key: Ctrl+<char> closes the dialog (Windows analog
+                        // of swiftDialog's Cmd-based --quitkey).
+                        if (!string.IsNullOrEmpty(quitKey) &&
+                            System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control &&
+                            KeyMatchesChar(e.Key, quitKey[0]))
+                        {
+                            Console.WriteLine($"[DEBUG] Quit key pressed (Ctrl+{quitKey}) - closing");
+                            result.ButtonPressed = "quit";
+                            _window.AllowClose = true;
+                            _window.Close();
+                            e.Handled = true;
+                            return;
+                        }
+
+                        if (configuration.HideDefaultKeyboardAction)
+                        {
+                            // Suppress Esc/Enter and Alt+F4 (the default keyboard
+                            // dismissals). swiftDialog --hidedefaultkeyboardaction.
+                            if (e.Key == System.Windows.Input.Key.Escape ||
+                                e.Key == System.Windows.Input.Key.Enter ||
+                                e.Key == System.Windows.Input.Key.Return ||
+                                (e.SystemKey == System.Windows.Input.Key.F4 &&
+                                 (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Alt) != 0))
+                            {
+                                e.Handled = true;
+                                Console.WriteLine($"[DEBUG] Default keyboard action suppressed ({e.Key})");
+                            }
+                        }
+                    };
+                }
+
                 // Wait for window to load before accessing content elements
                 _window.Loaded += (s, e) =>
                 {
@@ -87,6 +142,27 @@ namespace csharpDialog.WPF.Services
                     
                     if (messageText != null && !string.IsNullOrEmpty(configuration.Message))
                         messageText.Text = configuration.Message;
+
+                    // Apply button1 text and disabled state (swiftDialog parity)
+                    var okButton = _window.FindName("OkButton") as Button;
+                    if (okButton != null)
+                    {
+                        var button1 = configuration.Buttons.FirstOrDefault(b => b.Action is "button1" or "ok");
+                        if (button1 != null && !string.IsNullOrEmpty(button1.Text))
+                            okButton.Content = button1.Text;
+
+                        // Record the configured action so the dialog result (and
+                        // the CLI exit-code mapping) reflects which button closed
+                        // the window instead of always reporting the default "ok".
+                        var button1Action = button1?.Action ?? "button1";
+                        okButton.Click += (cs, ce) => result.ButtonPressed = button1Action;
+
+                        if (configuration.Button1Disabled)
+                        {
+                            okButton.IsEnabled = false;
+                            Console.WriteLine($"[DEBUG] Button1 disabled (--button1disabled)");
+                        }
+                    }
 
                     // Hide progress bar if not enabled
                     var progressBar = _window.FindName("ProgressBarControl") as ProgressBar;
@@ -186,6 +262,7 @@ namespace csharpDialog.WPF.Services
                         timeoutTimer.Stop();
                         Console.WriteLine($"[DEBUG] Timeout reached - closing window");
                         result.ButtonPressed = "timeout";
+                        _window.AllowClose = true;
                         _window.Close();
                     };
                     timeoutTimer.Start();
@@ -312,8 +389,37 @@ namespace csharpDialog.WPF.Services
                         ProcessListItemCommand(command);
                         break;
 
+                    case "button1text":
+                        var okBtnText = _window!.FindName("OkButton") as Button;
+                        if (okBtnText != null)
+                            okBtnText.Content = command.Value;
+                        break;
+
+                    case "button1":
+                        // "button1: enable" / "button1: disable" — toggles the button
+                        // and the close lock together (swiftDialog parity: enabling
+                        // button1 restores a legitimate dismissal path).
+                        var okBtnState = _window!.FindName("OkButton") as Button;
+                        if (okBtnState != null)
+                        {
+                            if (command.Value.Equals("enable", StringComparison.OrdinalIgnoreCase))
+                            {
+                                okBtnState.IsEnabled = true;
+                                _closeLocked = false;
+                                Console.WriteLine($"[DEBUG] Button1 enabled - close lock released");
+                            }
+                            else if (command.Value.Equals("disable", StringComparison.OrdinalIgnoreCase))
+                            {
+                                okBtnState.IsEnabled = false;
+                                _closeLocked = true;
+                                Console.WriteLine($"[DEBUG] Button1 disabled - close lock engaged");
+                            }
+                        }
+                        break;
+
                     case "quit":
-                        _window!.Close();
+                        _window!.AllowClose = true;
+                        _window.Close();
                         break;
                 }
             }
@@ -322,6 +428,18 @@ namespace csharpDialog.WPF.Services
                 Console.WriteLine($"[DEBUG] ERROR in ProcessCommandSync: {ex.Message}");
                 Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
             }
+        }
+
+        // Maps a WPF Key to a quit-key character (letters and digits).
+        private static bool KeyMatchesChar(System.Windows.Input.Key key, char ch)
+        {
+            var upper = char.ToUpperInvariant(ch);
+            if (upper >= 'A' && upper <= 'Z')
+                return key.ToString().Equals(upper.ToString(), StringComparison.Ordinal);
+            if (upper >= '0' && upper <= '9')
+                return key.ToString().Equals("D" + upper, StringComparison.Ordinal) ||
+                       key.ToString().Equals("NumPad" + upper, StringComparison.Ordinal);
+            return false;
         }
 
         private void OnCommandError(object? sender, CommandFileErrorEventArgs e)
@@ -370,7 +488,31 @@ namespace csharpDialog.WPF.Services
                             ProcessListItemCommand(command);
                             break;
 
+                        case "button1text":
+                            var okBtnText = _window.FindName("OkButton") as Button;
+                            if (okBtnText != null)
+                                okBtnText.Content = command.Value;
+                            break;
+
+                        case "button1":
+                            var okBtnState = _window.FindName("OkButton") as Button;
+                            if (okBtnState != null)
+                            {
+                                if (command.Value.Equals("enable", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    okBtnState.IsEnabled = true;
+                                    _closeLocked = false;
+                                }
+                                else if (command.Value.Equals("disable", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    okBtnState.IsEnabled = false;
+                                    _closeLocked = true;
+                                }
+                            }
+                            break;
+
                         case "quit":
+                            _window.AllowClose = true;
                             _window.Close();
                             break;
                     }

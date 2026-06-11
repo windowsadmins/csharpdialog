@@ -126,6 +126,23 @@ csharpdialog --title "Auto-close" --message "This will close in 10 seconds" --ti
 |--------|-------------|---------|
 | `--commandfile` | Enable live updates via command file | `--commandfile "C:\temp\commands.txt"` |
 
+### Lock / Dismissal Control (swiftDialog parity)
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--button1disabled` | Disable button1; window refuses to close (X, Alt+F4) until `quit`, quit key, timeout, or `button1: enable` | `--button1disabled` |
+| `--quitkey` | Single character; Ctrl+\<char\> closes the dialog | `--quitkey 0` |
+| `--hidedefaultkeyboardaction` | Suppress Esc/Enter/Alt+F4 dismissal | `--hidedefaultkeyboardaction` |
+
+Use all three together for a non-blocking but undismissable progress window
+that only the controlling script can close (via the command file), matching
+swiftDialog's locked provisioning dialogs:
+
+```powershell
+dialog --window --centeronscreen --topmost --button1text "Please wait" `
+  --button1disabled --hidedefaultkeyboardaction --quitkey 0 `
+  --commandfile "C:\temp\commands.txt"
+```
+
 ### Styling (Legacy)
 | Option | Description | Example |
 |--------|-------------|---------|
@@ -189,6 +206,12 @@ progresstext: Processing step 3 of 4...
 title: New Title
 message: Updated message
 button1text: Continue
+```
+
+#### Enable / Disable Button1 (releases or engages the close lock)
+```
+button1text: Get Started
+button1: enable
 ```
 
 #### Close Dialog

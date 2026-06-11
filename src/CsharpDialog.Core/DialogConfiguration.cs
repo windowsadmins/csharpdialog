@@ -29,6 +29,27 @@ namespace csharpDialog.Core
         public string CommandFilePath { get; set; } = string.Empty;
         public bool EnableCommandFile { get; set; } = false;
         public bool AutoClearCommandFile { get; set; } = true;
+
+        // Lock / dismissal control (swiftDialog parity)
+        /// <summary>
+        /// Renders button1 disabled. While disabled the window also refuses to
+        /// close via the title-bar X, so the dialog can only be dismissed by a
+        /// quit command, the quit key, a timeout, or a later "button1: enable".
+        /// Mirrors swiftDialog's --button1disabled.
+        /// </summary>
+        public bool Button1Disabled { get; set; } = false;
+
+        /// <summary>
+        /// Single character; Ctrl+&lt;char&gt; closes the dialog (the Windows
+        /// analog of swiftDialog's Cmd-based --quitkey). Empty = no quit key.
+        /// </summary>
+        public string QuitKey { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Suppresses the default keyboard dismissals (Esc, Enter, Alt+F4).
+        /// Mirrors swiftDialog's --hidedefaultkeyboardaction.
+        /// </summary>
+        public bool HideDefaultKeyboardAction { get; set; } = false;
         
         // Progress bar configuration
         public bool ShowProgressBar { get; set; } = false;
