@@ -35,10 +35,15 @@ jobs:
       - name: Derive version from tag
         id: version
         shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          $tag = "${{ github.ref_name }}"
-          $version = $tag -replace '^v',''
+          $version = $env:TAG -replace '^v',''
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Install WiX Toolset
+        shell: pwsh
+        run: dotnet tool install --global wix
 
       - name: Build + package (unsigned)
         shell: pwsh
@@ -58,8 +63,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
         run: |
-          $tag = '${{ github.ref_name }}'
+          $tag = $env:TAG
           $title = "csharpDialog $tag"
           $dotnet = (dotnet --version).Trim()
           $os = (Get-CimInstance Win32_OperatingSystem).Caption.Trim()
