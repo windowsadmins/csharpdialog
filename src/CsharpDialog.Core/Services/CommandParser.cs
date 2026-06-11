@@ -11,7 +11,8 @@ public class CommandParser : ICommandParser
     private static readonly string[] ValidCommands = {
         "title", "message", "progress", "progresstext", "progressincrement", "progressreset", 
         "quit", "listitem", "list", "config", "style", "theme", "execute", "executepowershell", 
-        "executeoutput", "width", "height", "position", "icon", "image", "button1text", "button2text"
+        "executeoutput", "width", "height", "position", "icon", "image", "button1text", "button2text",
+        "button1", "button2"
     };
 
     /// <summary>
@@ -25,16 +26,27 @@ public class CommandParser : ICommandParser
         }
 
         var trimmedLine = commandLine.Trim();
-        
-        // Basic command format: "command: value"
+
+        // Basic command format: "command: value". A bare command name with no
+        // colon is also accepted for value-less commands (e.g. "quit"), which
+        // is the form the documentation and existing scripts use.
         var colonIndex = trimmedLine.IndexOf(':');
+        string commandType;
+        string commandValue;
         if (colonIndex == -1)
         {
-            return null; // Invalid format
+            commandType = trimmedLine.ToLowerInvariant();
+            commandValue = string.Empty;
+            if (!ValidCommands.Contains(commandType))
+            {
+                return null; // Not a bare valid command
+            }
         }
-
-        var commandType = trimmedLine[..colonIndex].Trim().ToLowerInvariant();
-        var commandValue = trimmedLine[(colonIndex + 1)..].Trim();
+        else
+        {
+            commandType = trimmedLine[..colonIndex].Trim().ToLowerInvariant();
+            commandValue = trimmedLine[(colonIndex + 1)..].Trim();
+        }
 
         if (!ValidCommands.Contains(commandType))
         {
