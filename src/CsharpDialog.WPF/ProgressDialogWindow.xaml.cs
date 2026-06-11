@@ -14,6 +14,13 @@ namespace csharpDialog.WPF
     {
         private bool _isDarkMode;
 
+        /// <summary>
+        /// Set by legitimate dismissal paths (button click, quit command, quit
+        /// key, timeout) so the close-lock in WpfDialogService lets the window
+        /// close while --button1disabled is in effect.
+        /// </summary>
+        public bool AllowClose { get; set; } = false;
+
         // Win32 API for dark mode title bar
         [DllImport("dwmapi.dll", PreserveSig = true)]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -124,6 +131,7 @@ namespace csharpDialog.WPF
 
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
+            AllowClose = true;
             this.Close();
         }
     }
