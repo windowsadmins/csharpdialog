@@ -56,9 +56,9 @@ namespace csharpDialog.Core
                         config.Button1Disabled = true;
                         break;
                     case "--quitkey":
-                        if (!string.IsNullOrEmpty(value))
+                        if (!string.IsNullOrWhiteSpace(value))
                         {
-                            config.QuitKey = value;
+                            config.QuitKey = value.Trim().Substring(0, 1);
                             i++;
                         }
                         break;

@@ -22,9 +22,10 @@ namespace csharpDialog.WPF.Services
         private int _nextListItemIndex = 0;
         private bool _isDarkMode = false;
         // True while button1 is disabled: the window refuses to close via the
-        // title-bar X or Alt+F4 until a legitimate dismissal path sets
-        // _window.AllowClose (quit command, quit key, timeout, button1: enable
-        // followed by a click). swiftDialog --button1disabled parity.
+        // title-bar X or Alt+F4. The lock clears when a legitimate dismissal
+        // path sets _window.AllowClose (quit command, quit key, timeout, button
+        // click) or immediately on a runtime "button1: enable" command.
+        // swiftDialog --button1disabled parity.
         private bool _closeLocked = false;
 
         public event EventHandler<CommandReceivedEventArgs>? CommandReceived;
@@ -74,19 +75,18 @@ namespace csharpDialog.WPF.Services
                 if (!string.IsNullOrEmpty(configuration.Title))
                     _window.Title = configuration.Title;
 
-                // Lock / dismissal control (swiftDialog parity)
+                // Lock / dismissal control (swiftDialog parity). The handler is
+                // always attached because the lock can also be engaged at runtime
+                // via a "button1: disable" command-file command.
                 _closeLocked = configuration.Button1Disabled;
-                if (_closeLocked)
+                _window.Closing += (s, e) =>
                 {
-                    _window.Closing += (s, e) =>
+                    if (_closeLocked && !_window.AllowClose)
                     {
-                        if (_closeLocked && !_window.AllowClose)
-                        {
-                            e.Cancel = true;
-                            Console.WriteLine($"[DEBUG] Close prevented - button1disabled lock active");
-                        }
-                    };
-                }
+                        e.Cancel = true;
+                        Console.WriteLine($"[DEBUG] Close prevented - button1disabled lock active");
+                    }
+                };
 
                 if (configuration.HideDefaultKeyboardAction || !string.IsNullOrEmpty(configuration.QuitKey))
                 {
@@ -150,6 +150,12 @@ namespace csharpDialog.WPF.Services
                         var button1 = configuration.Buttons.FirstOrDefault(b => b.Action is "button1" or "ok");
                         if (button1 != null && !string.IsNullOrEmpty(button1.Text))
                             okButton.Content = button1.Text;
+
+                        // Record the configured action so the dialog result (and
+                        // the CLI exit-code mapping) reflects which button closed
+                        // the window instead of always reporting the default "ok".
+                        var button1Action = button1?.Action ?? "button1";
+                        okButton.Click += (cs, ce) => result.ButtonPressed = button1Action;
 
                         if (configuration.Button1Disabled)
                         {

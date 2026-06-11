@@ -26,16 +26,27 @@ public class CommandParser : ICommandParser
         }
 
         var trimmedLine = commandLine.Trim();
-        
-        // Basic command format: "command: value"
+
+        // Basic command format: "command: value". A bare command name with no
+        // colon is also accepted for value-less commands (e.g. "quit"), which
+        // is the form the documentation and existing scripts use.
         var colonIndex = trimmedLine.IndexOf(':');
+        string commandType;
+        string commandValue;
         if (colonIndex == -1)
         {
-            return null; // Invalid format
+            commandType = trimmedLine.ToLowerInvariant();
+            commandValue = string.Empty;
+            if (!ValidCommands.Contains(commandType))
+            {
+                return null; // Not a bare valid command
+            }
         }
-
-        var commandType = trimmedLine[..colonIndex].Trim().ToLowerInvariant();
-        var commandValue = trimmedLine[(colonIndex + 1)..].Trim();
+        else
+        {
+            commandType = trimmedLine[..colonIndex].Trim().ToLowerInvariant();
+            commandValue = trimmedLine[(colonIndex + 1)..].Trim();
+        }
 
         if (!ValidCommands.Contains(commandType))
         {
