@@ -37,6 +37,7 @@ namespace csharpDialog.Core
                         i++;
                         break;
                     case "--button1":
+                    case "--button1text":
                         if (!string.IsNullOrEmpty(value))
                         {
                             config.Buttons.Add(new DialogButton { Text = value, Action = "button1", IsDefault = true });
@@ -44,11 +45,25 @@ namespace csharpDialog.Core
                         }
                         break;
                     case "--button2":
+                    case "--button2text":
                         if (!string.IsNullOrEmpty(value))
                         {
                             config.Buttons.Add(new DialogButton { Text = value, Action = "button2" });
                             i++;
                         }
+                        break;
+                    case "--button1disabled":
+                        config.Button1Disabled = true;
+                        break;
+                    case "--quitkey":
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            config.QuitKey = value;
+                            i++;
+                        }
+                        break;
+                    case "--hidedefaultkeyboardaction":
+                        config.HideDefaultKeyboardAction = true;
                         break;
                     case "--timeout":
                         if (int.TryParse(value, out int timeout))
@@ -195,8 +210,12 @@ namespace csharpDialog.Core
             Console.WriteLine("  --title, -t <text>       Set dialog title");
             Console.WriteLine("  --message, -m <text>     Set dialog message");
             Console.WriteLine("  --icon, -i <path>        Set dialog icon");
-            Console.WriteLine("  --button1 <text>         Set first button text");
-            Console.WriteLine("  --button2 <text>         Set second button text");
+            Console.WriteLine("  --button1 <text>         Set first button text (alias: --button1text)");
+            Console.WriteLine("  --button2 <text>         Set second button text (alias: --button2text)");
+            Console.WriteLine("  --button1disabled        Disable button1; window cannot be closed until");
+            Console.WriteLine("                           quit command, quit key, timeout, or button1: enable");
+            Console.WriteLine("  --quitkey <char>         Ctrl+<char> closes the dialog");
+            Console.WriteLine("  --hidedefaultkeyboardaction  Suppress Esc/Enter/Alt+F4 dismissal");
             Console.WriteLine("  --timeout <seconds>      Auto-close after timeout");
             Console.WriteLine("  --width <pixels>         Set dialog width");
             Console.WriteLine("  --height <pixels>        Set dialog height");

@@ -11,7 +11,8 @@ public class CommandParser : ICommandParser
     private static readonly string[] ValidCommands = {
         "title", "message", "progress", "progresstext", "progressincrement", "progressreset", 
         "quit", "listitem", "list", "config", "style", "theme", "execute", "executepowershell", 
-        "executeoutput", "width", "height", "position", "icon", "image", "button1text", "button2text"
+        "executeoutput", "width", "height", "position", "icon", "image", "button1text", "button2text",
+        "button1", "button2"
     };
 
     /// <summary>
