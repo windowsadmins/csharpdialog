@@ -59,6 +59,16 @@ jobs:
           }
           Get-ChildItem release | Format-Table Name, Length
 
+      - name: Prepare release zips
+        shell: pwsh
+        run: |
+          foreach ($rid in @("win-x64", "win-arm64")) {
+            $arch = if ($rid -eq "win-x64") { "x64" } else { "arm64" }
+            $publishDir = "src/CsharpDialog.CLI/bin/Release/net10.0-windows/$rid/publish"
+            if (-not (Test-Path $publishDir)) { throw "Publish output not found: $publishDir" }
+            Compress-Archive -Path "$publishDir/*" -DestinationPath "release/csharpdialog-$arch.zip" -Force
+          }
+
       - name: Create GitHub Release
         shell: pwsh
         env:
