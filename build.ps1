@@ -250,7 +250,7 @@ function Publish-CliOutput {
     # Sign published executables immediately if signing is enabled
     # This ensures the binaries are signed BEFORE they're packaged into MSI/PKG
     if ($Sign) {
-        $certificateName = "ExampleOrgU Intune Windows Enterprise Certificate"
+        $certificateName = "$(if ($env:SIGNING_CERT_CN) { $env:SIGNING_CERT_CN } else { 'unset-signing-cert-cn' })"
         $timestampUrl = "http://timestamp.sectigo.com"
 
         Get-ChildItem -Path $PublishDirectory -Filter "*.exe" | ForEach-Object {
@@ -629,9 +629,9 @@ foreach ($runtimeOption in $runtimeList) {
 }
 
 if ($Sign -and $filesToSign.Count -gt 0) {
-    Write-Host "Signing artifacts with ExampleOrgU Intune Windows Enterprise Certificate..." -ForegroundColor Yellow
+    Write-Host "Signing artifacts with the configured signing certificate..." -ForegroundColor Yellow
 
-    $certificateName = "ExampleOrgU Intune Windows Enterprise Certificate"
+    $certificateName = "$(if ($env:SIGNING_CERT_CN) { $env:SIGNING_CERT_CN } else { 'unset-signing-cert-cn' })"
     $timestampUrl = "http://timestamp.sectigo.com"
 
     foreach ($file in $filesToSign | Sort-Object -Unique) {

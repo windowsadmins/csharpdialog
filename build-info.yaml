@@ -4,6 +4,6 @@ product:
   developer: Windows Admins Open Source
   identifier: com.github.windowsadmins.csharpdialog
   description: Create user dialogs and notifications on Windows
-signing_certificate: ExampleOrgU Intune Windows Enterprise Certificate
+signing_certificate: ${SIGNING_CERT_CN}
 postinstall_action: none
 install_location: 'C:\Program Files\csharpDialog'

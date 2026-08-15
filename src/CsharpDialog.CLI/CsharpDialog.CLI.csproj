@@ -19,7 +19,7 @@
     <RollForward>LatestMinor</RollForward>
     <!-- Code signing will be configured for enterprise environment -->
     <!-- SignAssembly>true</SignAssembly -->
-    <!-- PostBuildEvent>signtool sign /n "ExampleOrgU Intune Windows Enterprise Certificate" /t http://timestamp.sectigo.com "$(TargetPath)"</PostBuildEvent -->
+    <!-- PostBuildEvent>signtool sign /n the configured signing certificate /t http://timestamp.sectigo.com "$(TargetPath)"</PostBuildEvent -->
   </PropertyGroup>
 
 </Project>
