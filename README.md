@@ -55,7 +55,7 @@ For enterprise environments with code signing requirements:
 .\sign-build.ps1 -Sign
 ```
 
-**Note**: Signing requires the "EmilyCarrU Intune Windows Enterprise Certificate" to be available in the certificate store.
+**Note**: Signing requires the the configured signing certificate to be available in the certificate store.
 
 ### Running in Restricted Environments
 
