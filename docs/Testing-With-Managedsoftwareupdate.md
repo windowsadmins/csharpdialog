@@ -87,7 +87,7 @@ foreach ($app in $manifest.ManagedInstalls) {
 $msuProcess = Start-Process "C:\Program Files\Cimian\managedsoftwareupdate.exe" -PassThru -NoNewWindow
 
 # Monitor log file and update dialog
-$logFile = "C:\ProgramData\Cimian\Logs\managedsoftwareupdate.log"
+$logFile = "C:\ProgramData\ManagedInstalls\reports\run.log"
 $lastPosition = 0
 
 while (!$msuProcess.HasExited) {
