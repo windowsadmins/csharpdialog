@@ -276,7 +276,7 @@ installer:
 ### Log Monitoring
 
 csharpDialog monitors the Cimian log file at:
-- `C:\ProgramData\Cimian\Logs\managedsoftwareupdate.log`
+- `C:\ProgramData\ManagedInstalls\reports\run.log`
 
 ### Supported Log Patterns
 

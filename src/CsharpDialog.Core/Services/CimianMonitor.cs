@@ -65,7 +65,8 @@ public class CimianMonitor : IDisposable
             // Setup log monitoring
             if (!SetupLogMonitoring())
             {
-                throw new InvalidOperationException("Could not setup Cimian log monitoring. Ensure Cimian is installed and running.");
+                throw new InvalidOperationException(
+                    $"Could not set up Cimian log monitoring: no log found at {_cimianLogPath}.");
             }
             
             // Check if Cimian is already running, if not try to start it
@@ -161,34 +162,63 @@ public class CimianMonitor : IDisposable
     }
     
     /// <summary>
-    /// Initializes Cimian paths and configuration
+    /// Resolves the log this monitor tails.
     /// </summary>
+    /// <remarks>
+    /// This used to look for %ProgramData%\Cimian\Logs\managedsoftwareupdate.log and two
+    /// variations on it. No such directory is created -- the client keeps its data under
+    /// %ProgramData%\ManagedInstalls -- so the file was never found, SetupLogMonitoring
+    /// returned false, and first-run monitoring failed with "Ensure Cimian is installed
+    /// and running" on machines where it was installed and running.
+    ///
+    /// The rolling report log is the right thing to tail: there is one of it, it is
+    /// appended to for the life of a run, and its path does not change between sessions
+    /// the way the dated per-session log does.
+    /// </remarks>
     private void InitializeCimianPaths()
     {
-        // Standard Cimian log locations
-        var possibleLogPaths = new[]
+        _cimianLogPath = CimianRollingLogPath;
+
+        if (File.Exists(_cimianLogPath))
+            return;
+
+        // Nothing has rolled up yet on a freshly imaged machine; fall back to the
+        // newest per-session log so a first run is still followed.
+        var newestSessionLog = FindNewestSessionLog();
+        if (!string.IsNullOrEmpty(newestSessionLog))
+            _cimianLogPath = newestSessionLog;
+    }
+
+    /// <summary>%ProgramData%\ManagedInstalls\reports\run.log</summary>
+    private static string CimianRollingLogPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "ManagedInstalls", "reports", "run.log");
+
+    /// <summary>
+    /// Newest %ProgramData%\ManagedInstalls\logs\&lt;yyyy-MM-dd&gt;\&lt;HHmm&gt;\install.log,
+    /// or null when the client has never run here.
+    /// </summary>
+    private static string? FindNewestSessionLog()
+    {
+        try
         {
-            @"C:\ProgramData\Cimian\Logs\managedsoftwareupdate.log",
-            @"C:\Program Files\Cimian\Logs\managedsoftwareupdate.log",
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Cimian\Logs\managedsoftwareupdate.log")
-        };
-        
-        foreach (var path in possibleLogPaths)
-        {
-            if (File.Exists(path))
-            {
-                _cimianLogPath = path;
-                break;
-            }
+            var logsRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "ManagedInstalls", "logs");
+
+            if (!Directory.Exists(logsRoot))
+                return null;
+
+            return Directory.EnumerateFiles(logsRoot, "install.log", SearchOption.AllDirectories)
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
         }
-        
-        // If no existing log found, use the standard location
-        if (string.IsNullOrEmpty(_cimianLogPath))
+        catch
         {
-            _cimianLogPath = @"C:\ProgramData\Cimian\Logs\managedsoftwareupdate.log";
+            return null;
         }
     }
-    
+
     /// <summary>
     /// Sets up log file monitoring for Cimian progress
     /// </summary>
