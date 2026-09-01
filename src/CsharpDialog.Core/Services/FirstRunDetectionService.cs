@@ -209,40 +209,12 @@ public class FirstRunDetectionService
             }
 #endif
             
-            // Method 3: Check for bootstrap completion markers
-            var bootstrapMarkers = new[]
+            // Method 3: Cimian's bootstrap flag exists for the life of a bootstrap run
+            if (File.Exists(CimianPaths.BootstrapFlagFile))
             {
-                @"C:\ProgramData\Cimian\bootstrap_in_progress",
-                @"C:\ProgramData\Cimian\.bootstrap_running"
-            };
-            
-            foreach (var marker in bootstrapMarkers)
-            {
-                if (File.Exists(marker))
-                {
-                    var creationTime = File.GetCreationTime(marker);
-                    var age = DateTime.Now - creationTime;
-                    // Active bootstrap process
-                    if (age < TimeSpan.FromHours(4))
-                    {
-                        return true;
-                    }
-                }
+                return true;
             }
-            
-            // Method 4: Check for recent bootstrap completion
-            var completionMarker = @"C:\ProgramData\Cimian\bootstrap_complete";
-            if (File.Exists(completionMarker))
-            {
-                var completionTime = File.GetCreationTime(completionMarker);
-                var timeSinceCompletion = DateTime.Now - completionTime;
-                // Bootstrap completed recently
-                if (timeSinceCompletion < TimeSpan.FromHours(1))
-                {
-                    return true;
-                }
-            }
-            
+
             return false;
         }
         catch
@@ -465,16 +437,15 @@ public class FirstRunDetectionService
 #endif
             
             // Create completion marker file
-            var markerDirectory = @"C:\ProgramData\Cimian";
-            if (Directory.Exists(markerDirectory))
+            if (Directory.Exists(CimianPaths.ManagedInstallsRoot))
             {
-                var markerPath = Path.Combine(markerDirectory, "first_run_completed");
+                var markerPath = Path.Combine(CimianPaths.ManagedInstallsRoot, "first_run_completed");
                 File.WriteAllText(markerPath, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors in marking completion
+            FileLog.Warn("Could not record first-run completion", ex);
         }
     }
     

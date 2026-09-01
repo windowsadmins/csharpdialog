@@ -77,10 +77,16 @@ $dialogJob = Start-Job {
 Start-Sleep -Seconds 2
 
 # Parse manifest and add list items
-$manifest = Get-Content "C:\ProgramData\Cimian\manifests\staff.json" | ConvertFrom-Json
-foreach ($app in $manifest.ManagedInstalls) {
-    $title = $app.DisplayName ?? $app.Name
-    "listitem: add, title: $title, status: pending" | Out-File $commandFile -Append
+$inList = $false
+foreach ($line in Get-Content "C:\ProgramData\ManagedInstalls\manifests\<name>.yaml") {
+    $trimmed = $line.Trim()
+    if ($trimmed -eq 'managed_installs:') { $inList = $true; continue }
+    if ($inList -and $trimmed.StartsWith('- ')) {
+        $title = $trimmed.Substring(2).Trim('"', "'")
+        "listitem: add, title: $title, status: pending" | Out-File $commandFile -Append
+        continue
+    }
+    if ($inList) { $inList = $false }
 }
 
 # Start managedsoftwareupdate

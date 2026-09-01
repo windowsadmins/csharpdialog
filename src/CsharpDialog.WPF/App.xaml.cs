@@ -1,4 +1,5 @@
 ﻿using csharpDialog.Core;
+using csharpDialog.Core.Services;
 using System.Configuration;
 using System.Data;
 using System.Windows;
@@ -14,6 +15,7 @@ public partial class App : Application
     {
         // Set shutdown mode to close when main window closes
         ShutdownMode = ShutdownMode.OnMainWindowClose;
+        FileLog.Info($"csharpdialog {typeof(App).Assembly.GetName().Version} starting (WPF host): {string.Join(' ', e.Args)}");
         
         // Parse command line arguments
         var configuration = CommandLineParser.ParseArguments(e.Args);
@@ -30,6 +32,7 @@ public partial class App : Application
         {
             var result = dialogWindow.GetDialogResult();
             int exitCode = result.ButtonPressed == "ok" || result.ButtonPressed == "button1" ? 0 : 1;
+            FileLog.Info($"Exiting with code {exitCode}");
             Environment.Exit(exitCode);
         };
     }

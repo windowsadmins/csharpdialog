@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using csharpDialog.Core.Models;
 #if WINDOWS
@@ -85,11 +84,7 @@ public class CimianMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
-            {
-                Message = $"Failed to start Cimian monitoring: {ex.Message}",
-                Exception = ex
-            });
+            RaiseError("Failed to start Cimian monitoring", ex);
             return false;
         }
     }
@@ -140,18 +135,12 @@ public class CimianMonitor : IDisposable
             }
 #endif
             
-            // 3. Check for bootstrap completion markers
-            var bootstrapMarker = @"C:\ProgramData\Cimian\bootstrap_complete";
-            if (File.Exists(bootstrapMarker))
+            // 3. Cimian's bootstrap flag exists for the life of a bootstrap run
+            if (File.Exists(CimianPaths.BootstrapFlagFile))
             {
-                var creationTime = File.GetCreationTime(bootstrapMarker);
-                // Bootstrap completed recently
-                if (DateTime.Now - creationTime < TimeSpan.FromHours(1))
-                {
-                    return true;
-                }
+                return true;
             }
-            
+
             return false;
         }
         catch
@@ -165,51 +154,44 @@ public class CimianMonitor : IDisposable
     /// Resolves the log this monitor tails.
     /// </summary>
     /// <remarks>
-    /// This used to look for %ProgramData%\Cimian\Logs\managedsoftwareupdate.log and two
-    /// variations on it. No such directory is created -- the client keeps its data under
-    /// %ProgramData%\ManagedInstalls -- so the file was never found, SetupLogMonitoring
-    /// returned false, and first-run monitoring failed with "Ensure Cimian is installed
-    /// and running" on machines where it was installed and running.
-    ///
-    /// The rolling report log is the right thing to tail: there is one of it, it is
-    /// appended to for the life of a run, and its path does not change between sessions
-    /// the way the dated per-session log does.
+    /// The client truncates and rewrites %ProgramData%\ManagedInstalls\reports\run.log at
+    /// the start of every run, so it is the simplest live source: one file, one path, and
+    /// it only ever holds the current run. When it is absent the newest per-session
+    /// logs\yyyy-MM-dd\HHmm\run.log is used instead.
     /// </remarks>
     private void InitializeCimianPaths()
     {
-        _cimianLogPath = CimianRollingLogPath;
+        _cimianLogPath = CimianPaths.ReportRunLog;
 
         if (File.Exists(_cimianLogPath))
+        {
+            FileLog.Info($"Cimian monitor tailing {_cimianLogPath}");
             return;
+        }
 
-        // Nothing has rolled up yet on a freshly imaged machine; fall back to the
-        // newest per-session log so a first run is still followed.
         var newestSessionLog = FindNewestSessionLog();
         if (!string.IsNullOrEmpty(newestSessionLog))
+        {
             _cimianLogPath = newestSessionLog;
+            FileLog.Info($"Cimian monitor tailing {_cimianLogPath} (no report log yet)");
+            return;
+        }
+
+        FileLog.Warn($"No Cimian run log found under {CimianPaths.ManagedInstallsRoot}");
     }
 
-    /// <summary>%ProgramData%\ManagedInstalls\reports\run.log</summary>
-    private static string CimianRollingLogPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-        "ManagedInstalls", "reports", "run.log");
-
     /// <summary>
-    /// Newest %ProgramData%\ManagedInstalls\logs\&lt;yyyy-MM-dd&gt;\&lt;HHmm&gt;\install.log,
+    /// Newest %ProgramData%\ManagedInstalls\logs\&lt;yyyy-MM-dd&gt;\&lt;HHmm&gt;\run.log,
     /// or null when the client has never run here.
     /// </summary>
     private static string? FindNewestSessionLog()
     {
         try
         {
-            var logsRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "ManagedInstalls", "logs");
-
-            if (!Directory.Exists(logsRoot))
+            if (!Directory.Exists(CimianPaths.LogsDir))
                 return null;
 
-            return Directory.EnumerateFiles(logsRoot, "install.log", SearchOption.AllDirectories)
+            return Directory.EnumerateFiles(CimianPaths.LogsDir, "run.log", SearchOption.AllDirectories)
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
         }
@@ -288,11 +270,7 @@ public class CimianMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
-            {
-                Message = $"Error processing log file change: {ex.Message}",
-                Exception = ex
-            });
+            RaiseError("Error processing log file change", ex);
         }
     }
     
@@ -330,11 +308,7 @@ public class CimianMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
-            {
-                Message = $"Error reading log entries: {ex.Message}",
-                Exception = ex
-            });
+            RaiseError("Error reading log entries", ex);
         }
         
         return entries;
@@ -398,11 +372,7 @@ public class CimianMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
-            {
-                Message = $"Error parsing log entry: {ex.Message}",
-                Exception = ex
-            });
+            RaiseError("Error parsing log entry", ex);
         }
     }
     
@@ -533,70 +503,97 @@ public class CimianMonitor : IDisposable
     }
     
     /// <summary>
-    /// Parses the Cimian manifest to get expected installation items
+    /// Reads the client's cached manifests to get the expected installation items
     /// </summary>
+    /// <remarks>
+    /// The client caches every manifest it resolved as
+    /// %ProgramData%\ManagedInstalls\manifests\&lt;name&gt;.yaml. The expected items are the
+    /// union of their managed_installs lists.
+    /// </remarks>
     private async Task ParseManifestAsync()
     {
         try
         {
-            // Look for Cimian manifest files
-            var possibleManifests = new[]
+            var names = new List<string>();
+
+            if (Directory.Exists(CimianPaths.ManifestsDir))
             {
-                @"C:\ProgramData\Cimian\manifests\staff.json",
-                @"C:\ProgramData\Cimian\manifests\default.json",
-                @"C:\Program Files\Cimian\manifests\staff.json"
-            };
-            
-            string? manifestPath = null;
-            foreach (var path in possibleManifests)
-            {
-                if (File.Exists(path))
+                foreach (var manifestPath in Directory.EnumerateFiles(CimianPaths.ManifestsDir, "*.yaml"))
                 {
-                    manifestPath = path;
-                    break;
+                    names.AddRange(ReadManagedInstalls(await File.ReadAllLinesAsync(manifestPath)));
                 }
             }
-            
-            if (string.IsNullOrEmpty(manifestPath))
+
+            names = names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            if (names.Count == 0)
             {
-                // No manifest found, add some default expected items
+                FileLog.Warn($"No managed_installs found under {CimianPaths.ManifestsDir}; using the default item list");
                 await AddDefaultExpectedItems();
                 return;
             }
-            
-            var manifestContent = await File.ReadAllTextAsync(manifestPath);
-            var manifest = JsonSerializer.Deserialize<CimianManifest>(manifestContent);
-            
-            if (manifest?.ManagedInstalls != null)
+
+            foreach (var name in names)
             {
-                foreach (var install in manifest.ManagedInstalls)
+                _installItems.Add(new CimianInstallItem
                 {
-                    var item = new CimianInstallItem
-                    {
-                        Name = install.Name ?? install.DisplayName ?? "Unknown",
-                        Status = CimianInstallStatus.Pending,
-                        Progress = 0
-                    };
-                    _installItems.Add(item);
-                    
-                    // Add to dialog
-                    await _dialogService.AddListItemAsync(item.Name, ListItemStatus.Pending, "Waiting...");
-                }
-                
-                _totalItems = _installItems.Count;
+                    Name = name,
+                    Status = CimianInstallStatus.Pending,
+                    Progress = 0
+                });
+
+                await _dialogService.AddListItemAsync(name, ListItemStatus.Pending, "Waiting...");
             }
+
+            _totalItems = _installItems.Count;
+            FileLog.Info($"Expecting {_totalItems} managed install(s) from {CimianPaths.ManifestsDir}");
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
-            {
-                Message = $"Error parsing manifest: {ex.Message}",
-                Exception = ex
-            });
-            
+            RaiseError("Error parsing manifest", ex);
+
             // Fallback to default items
             await AddDefaultExpectedItems();
         }
+    }
+
+    /// <summary>
+    /// Collects the entries of every managed_installs list in a manifest. The manifests are
+    /// plain YAML with flat string lists, so a line scan is enough and avoids a YAML dependency.
+    /// </summary>
+    internal static List<string> ReadManagedInstalls(IEnumerable<string> lines)
+    {
+        var items = new List<string>();
+        var inList = false;
+
+        foreach (var raw in lines)
+        {
+            var line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith('#'))
+                continue;
+
+            if (line.Equals("managed_installs:", StringComparison.OrdinalIgnoreCase))
+            {
+                inList = true;
+                continue;
+            }
+
+            if (!inList)
+                continue;
+
+            if (line.StartsWith("- ", StringComparison.Ordinal))
+            {
+                var name = line[2..].Trim().Trim('"', '\'');
+                if (name.Length > 0)
+                    items.Add(name);
+                continue;
+            }
+
+            // Any other line is the next key, which ends the list
+            inList = false;
+        }
+
+        return items;
     }
     
     /// <summary>
@@ -638,37 +635,34 @@ public class CimianMonitor : IDisposable
             }
             
             // Try to start it
-            var cimianPaths = new[]
+            var exePath = CimianPaths.ManagedSoftwareUpdateExe;
+            if (!File.Exists(exePath))
             {
-                @"C:\Program Files\Cimian\managedsoftwareupdate.exe",
-                @"C:\ProgramData\Cimian\managedsoftwareupdate.exe"
-            };
-            
-            foreach (var path in cimianPaths)
-            {
-                if (File.Exists(path))
-                {
-                    var startInfo = new ProcessStartInfo(path)
-                    {
-                        Arguments = "--auto-run",
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-                    
-                    _cimianProcess = Process.Start(startInfo);
-                    if (_cimianProcess != null)
-                    {
-                        // Wait a moment for process to initialize
-                        await Task.Delay(2000);
-                        return !_cimianProcess.HasExited;
-                    }
-                }
+                FileLog.Warn($"Cimian is not running and {exePath} was not found");
+                return false;
             }
-            
+
+            var startInfo = new ProcessStartInfo(exePath)
+            {
+                Arguments = "--auto-run",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            FileLog.Info($"Starting {exePath} --auto-run");
+            _cimianProcess = Process.Start(startInfo);
+            if (_cimianProcess != null)
+            {
+                // Wait a moment for process to initialize
+                await Task.Delay(2000);
+                return !_cimianProcess.HasExited;
+            }
+
             return false;
         }
-        catch
+        catch (Exception ex)
         {
+            FileLog.Error("Could not start or attach to the Cimian process", ex);
             return false;
         }
     }
@@ -715,19 +709,28 @@ public class CimianMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
-            {
-                Message = $"Error in periodic update: {ex.Message}",
-                Exception = ex
-            });
+            RaiseError("Error in periodic update", ex);
         }
     }
     
+    /// <summary>
+    /// Records an error in the file log and raises it to subscribers
+    /// </summary>
+    private void RaiseError(string message, Exception exception)
+    {
+        FileLog.Error(message, exception);
+        ErrorOccurred?.Invoke(this, new CimianErrorEventArgs
+        {
+            Message = $"{message}: {exception.Message}",
+            Exception = exception
+        });
+    }
+
     public void Dispose()
     {
         if (_disposed)
             return;
-        
+
         StopMonitoring();
         _progressTimer?.Dispose();
         _logWatcher?.Dispose();
@@ -790,22 +793,4 @@ public class CimianErrorEventArgs : EventArgs
 {
     public string Message { get; set; } = string.Empty;
     public Exception? Exception { get; set; }
-}
-
-/// <summary>
-/// Simplified Cimian manifest structure for parsing
-/// </summary>
-public class CimianManifest
-{
-    public List<CimianManagedInstall>? ManagedInstalls { get; set; }
-}
-
-/// <summary>
-/// Represents a managed install item from Cimian manifest
-/// </summary>
-public class CimianManagedInstall
-{
-    public string? Name { get; set; }
-    public string? DisplayName { get; set; }
-    public string? Version { get; set; }
 }
