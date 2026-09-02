@@ -236,7 +236,9 @@ quit
 
 ### Logging
 
-Dialog results stay on stdout so scripts can parse them. Errors, warnings and process start/exit are also written to `C:\ProgramData\ManagedUtilities\logs\csharpdialog.log` as `[yyyy-MM-dd HH:mm:ss] LEVEL message`; the file rolls at 5 MB and five generations (`csharpdialog.log.1` to `.5`) are kept.
+Dialog results stay on stdout so scripts can parse them. Errors, warnings and process start/exit are also written to `C:\ProgramData\ManagedNotifications\logs\csharpdialog.log` as `[yyyy-MM-dd HH:mm:ss] LEVEL message`; the file rolls at 5 MB and five generations (`csharpdialog.log.1` to `.5`) are kept.
+
+Earlier builds logged under `ManagedUtilities`. The first run of a new build moves that file and its rotated generations across, so upgrading keeps the history.
 
 ### Tips & Best Practices
 
