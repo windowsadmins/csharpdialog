@@ -6,8 +6,12 @@ namespace csharpDialog.Core.Services;
 /// Minimal diagnostic file log with no dependencies.
 ///
 /// Writes one line per entry, "[yyyy-MM-dd HH:mm:ss] LEVEL message" with the level padded
-/// to five characters, to %ProgramData%\ManagedUtilities\logs\csharpdialog.log. The file
+/// to five characters, to %ProgramData%\ManagedNotifications\logs\csharpdialog.log. The file
 /// rolls at 5 MB and five generations are kept (csharpdialog.log.1 is the newest).
+///
+/// The dialog tools own their own root. This file is otherwise identical to the copies in
+/// sbin-installer, taskbarutil and airname, which log under ManagedUtilities; the root here
+/// differs deliberately, so do not "fix" the inconsistency by aligning them.
 ///
 /// This is for errors, warnings and process lifecycle only. The dialog's own output stays on
 /// stdout because callers parse it. Logging never throws: a failure to write the log must not
@@ -21,18 +25,56 @@ public static class FileLog
     private static readonly object Gate = new();
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
     private static string? _logPath;
+    private static bool _migrated;
 
     /// <summary>
     /// Full path of the active log file. Defaults to
-    /// %ProgramData%\ManagedUtilities\logs\csharpdialog.log; settable so a harness can
+    /// %ProgramData%\ManagedNotifications\logs\csharpdialog.log; settable so a harness can
     /// redirect it.
     /// </summary>
     public static string LogPath
     {
         get => _logPath ??= Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "ManagedUtilities", "logs", "csharpdialog.log");
-        set => _logPath = value;
+            "ManagedNotifications", "logs", "csharpdialog.log");
+        set { _logPath = value; _migrated = false; }
+    }
+
+    /// <summary>
+    /// Where earlier builds wrote, before the dialog tools were given their own root.
+    /// </summary>
+    public static string LegacyLogPath { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+        "ManagedUtilities", "logs", "csharpdialog.log");
+
+    /// <summary>
+    /// One-time move of the previous log and every rotated generation to the new root, so a
+    /// machine that upgrades keeps its history instead of starting blank. Runs once per
+    /// process, before the first write, and never throws: a diagnostic log is not worth
+    /// failing a dialog over. A generation already present at the destination is left alone,
+    /// which makes the move safe to attempt repeatedly.
+    /// </summary>
+    internal static void MigrateLegacyLog()
+    {
+        try
+        {
+            if (File.Exists(LogPath) || !File.Exists(LegacyLogPath))
+                return;
+
+            File.Move(LegacyLogPath, LogPath);
+
+            for (var generation = 1; generation <= Generations; generation++)
+            {
+                var from = $"{LegacyLogPath}.{generation}";
+                var to = $"{LogPath}.{generation}";
+                if (File.Exists(from) && !File.Exists(to))
+                    File.Move(from, to);
+            }
+        }
+        catch
+        {
+            // Keeping history is nice to have; never block logging on it.
+        }
     }
 
     public static void Debug(string message) => Write("DEBUG", message);
@@ -59,6 +101,13 @@ public static class FileLog
                 var directory = Path.GetDirectoryName(path);
                 if (!string.IsNullOrEmpty(directory))
                     Directory.CreateDirectory(directory);
+
+                if (!_migrated)
+                {
+                    // After CreateDirectory, so the destination root exists to move into.
+                    _migrated = true;
+                    MigrateLegacyLog();
+                }
 
                 RotateIfNeeded(path, Utf8NoBom.GetByteCount(line));
                 File.AppendAllText(path, line, Utf8NoBom);
