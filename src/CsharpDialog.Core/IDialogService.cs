@@ -228,6 +228,7 @@ namespace csharpDialog.Core
                 }
                 catch (Exception ex)
                 {
+                    FileLog.Warn("WPF service loading failed", ex);
                     Console.WriteLine($"[DEBUG] WPF service loading error: {ex.Message}");
                     Console.WriteLine($"[DEBUG] Exception type: {ex.GetType().Name}");
                     Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
@@ -578,6 +579,7 @@ namespace csharpDialog.Core
                 }
                 catch (JsonConfigurationException ex)
                 {
+                    FileLog.Error("JSON configuration error", ex);
                     Console.WriteLine($"JSON configuration error: {ex.Message}");
                     return false;
                 }
@@ -600,6 +602,7 @@ namespace csharpDialog.Core
                 }
                 catch (JsonConfigurationException ex)
                 {
+                    FileLog.Error("JSON configuration file error", ex);
                     Console.WriteLine($"JSON configuration file error: {ex.Message}");
                     return false;
                 }
@@ -618,6 +621,7 @@ namespace csharpDialog.Core
                 }
                 catch (Exception ex)
                 {
+                    FileLog.Error("Style configuration error", ex);
                     Console.WriteLine($"Style configuration error: {ex.Message}");
                     return false;
                 }

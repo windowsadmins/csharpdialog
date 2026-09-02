@@ -113,8 +113,7 @@ csharpDialog uses multiple methods to detect first-run scenarios:
 
 ### File System Markers
 
-- `C:\ProgramData\Cimian\bootstrap_complete` - Bootstrap completion
-- `C:\ProgramData\Cimian\bootstrap_in_progress` - Active bootstrap
+- `C:\ProgramData\ManagedInstalls\.cimian.bootstrap` - Present while a Cimian bootstrap run is active
 - `%USERPROFILE%\ntuser.dat` creation time - Profile age
 
 ## Cimian Integration
@@ -318,9 +317,7 @@ The Cimian repository follows a Munki-inspired structure:
 
 ### Manifest Parsing
 
-Expected manifest locations:
-- `C:\ProgramData\Cimian\manifests\staff.yaml`
-- `C:\ProgramData\Cimian\manifests\default.yaml`
+Manifests are read from the client's cache, `C:\ProgramData\ManagedInstalls\manifests\<name>.yaml`, and the expected items are the union of their `managed_installs` lists.
 
 Example package info (YAML):
 ```yaml

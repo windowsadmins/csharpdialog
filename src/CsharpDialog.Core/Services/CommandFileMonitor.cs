@@ -242,6 +242,12 @@ public class CommandFileMonitor : ICommandFileMonitor
 
     private void OnErrorOccurred(string message, Exception? exception = null)
     {
+        // The event doubles as a status channel, so only entries carrying an exception are errors
+        if (exception != null)
+            FileLog.Error(message);
+        else
+            FileLog.Info(message);
+
         ErrorOccurred?.Invoke(this, new CommandFileErrorEventArgs(message, exception));
     }
 

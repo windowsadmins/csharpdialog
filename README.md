@@ -234,6 +234,10 @@ quit
 - `2` - Button 2 clicked (secondary action)
 - `1` - Error or window closed
 
+### Logging
+
+Dialog results stay on stdout so scripts can parse them. Errors, warnings and process start/exit are also written to `C:\ProgramData\ManagedUtilities\logs\csharpdialog.log` as `[yyyy-MM-dd HH:mm:ss] LEVEL message`; the file rolls at 5 MB and five generations (`csharpdialog.log.1` to `.5`) are kept.
+
 ### Tips & Best Practices
 
 #### Using Command Files

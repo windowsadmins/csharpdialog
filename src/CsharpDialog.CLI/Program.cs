@@ -32,6 +32,8 @@ namespace csharpDialog.CLI
         {
             try
             {
+                FileLog.Info($"csharpdialog {typeof(Program).Assembly.GetName().Version} starting: {string.Join(' ', args)}");
+
                 // Check for auto-launch mode first
                 if (args.Length == 1 && args[0] == "--autolaunch")
                 {
@@ -49,7 +51,7 @@ namespace csharpDialog.CLI
                     if (!firstRunResult.IsFirstRun)
                     {
                         Console.WriteLine("Not a first-run scenario. Exiting.");
-                        Environment.Exit(0);
+                        Exit(0);
                     }
                     
                     // Configure for first-run
@@ -113,6 +115,7 @@ namespace csharpDialog.CLI
                     }
                     catch (Exception ex)
                     {
+                        FileLog.Warn("Direct WPF service load failed; using the dialog service factory", ex);
                         Console.WriteLine($"[DEBUG] Direct WPF load failed: {ex.Message}");
                         Console.WriteLine($"[DEBUG] Stack: {ex.StackTrace}");
                         dialogService = DialogServiceFactory.CreateDialogService(configuration);
@@ -133,6 +136,7 @@ namespace csharpDialog.CLI
                     
                     if (!monitoringStarted)
                     {
+                        FileLog.Warn("Could not start Cimian monitoring; continuing with the regular dialog");
                         Console.WriteLine("Warning: Could not start Cimian monitoring. Continuing with regular dialog.");
                     }
                 }
@@ -155,12 +159,13 @@ namespace csharpDialog.CLI
                 Console.WriteLine($"Timestamp: {result.Timestamp}");
                 
                 // Exit with appropriate code
-                Environment.Exit(result.ButtonPressed == "ok" || result.ButtonPressed == "button1" ? 0 : 1);
+                Exit(result.ButtonPressed == "ok" || result.ButtonPressed == "button1" ? 0 : 1);
             }
             catch (Exception ex)
             {
+                FileLog.Error("Unhandled error", ex);
                 Console.Error.WriteLine($"Error: {ex.Message}");
-                Environment.Exit(1);
+                Exit(1);
             }
         }
         
@@ -179,7 +184,7 @@ namespace csharpDialog.CLI
                 if (!firstRunResult.IsFirstRun)
                 {
                     Console.WriteLine("Not a first-run scenario. Auto-launch cancelled.");
-                    Environment.Exit(0);
+                    Exit(0);
                 }
                 
                 Console.WriteLine("First-run detected! Launching Cimian progress dialog...");
@@ -213,6 +218,7 @@ namespace csharpDialog.CLI
                 
                 if (!monitoringStarted)
                 {
+                    FileLog.Warn("Could not start Cimian monitoring; showing the basic first-run dialog");
                     Console.WriteLine("Warning: Could not start Cimian monitoring. Showing basic first-run dialog.");
                 }
                 
@@ -223,15 +229,25 @@ namespace csharpDialog.CLI
                 FirstRunDetectionService.MarkFirstRunCompleted();
                 
                 Console.WriteLine("First-run setup completed!");
-                Environment.Exit(0);
+                Exit(0);
             }
             catch (Exception ex)
             {
+                FileLog.Error("Auto-launch failed", ex);
                 Console.Error.WriteLine($"Auto-launch error: {ex.Message}");
-                Environment.Exit(1);
+                Exit(1);
             }
         }
         
+        /// <summary>
+        /// Records the exit code in the file log, then exits
+        /// </summary>
+        private static void Exit(int exitCode)
+        {
+            FileLog.Info($"Exiting with code {exitCode}");
+            Environment.Exit(exitCode);
+        }
+
         /// <summary>
         /// Initializes WPF Application if needed for GUI scenarios
         /// </summary>
@@ -271,6 +287,7 @@ namespace csharpDialog.CLI
             }
             catch (Exception ex)
             {
+                FileLog.Warn("WPF initialization failed", ex);
                 Console.WriteLine($"[DEBUG] WPF initialization error: {ex.Message}");
                 Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
             }

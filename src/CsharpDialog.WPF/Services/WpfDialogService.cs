@@ -425,6 +425,7 @@ namespace csharpDialog.WPF.Services
             }
             catch (Exception ex)
             {
+                FileLog.Error("Error processing dialog command", ex);
                 Console.WriteLine($"[DEBUG] ERROR in ProcessCommandSync: {ex.Message}");
                 Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
             }
@@ -519,6 +520,7 @@ namespace csharpDialog.WPF.Services
                 }
                 catch (Exception ex)
                 {
+                    FileLog.Error("Error processing command", ex);
                     Console.WriteLine($"Error processing command: {ex.Message}");
                 }
             });

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using CSharpDialog.Core.Models;
 using csharpDialog.Core;
+using csharpDialog.Core.Services;
 using csharpDialog.Core.Models;
 
 namespace CSharpDialog.Core.Services
@@ -32,6 +33,7 @@ namespace CSharpDialog.Core.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error processing dialog command '{command}': {ex.Message}");
+                FileLog.Error($"Error processing dialog command '{command}'", ex);
             }
         }
 
@@ -44,6 +46,7 @@ namespace CSharpDialog.Core.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error updating style {element}.{property}: {ex.Message}");
+                FileLog.Error($"Error updating style {element}.{property}", ex);
                 return false;
             }
         }
@@ -57,6 +60,7 @@ namespace CSharpDialog.Core.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error applying theme '{themeName}': {ex.Message}");
+                FileLog.Error($"Error applying theme '{themeName}'", ex);
                 return false;
             }
         }
@@ -81,6 +85,7 @@ namespace CSharpDialog.Core.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error showing dialog: {ex.Message}");
+                FileLog.Error("Error showing dialog", ex);
                 _isDialogOpen = false;
                 return false;
             }
@@ -97,6 +102,7 @@ namespace CSharpDialog.Core.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error closing dialog: {ex.Message}");
+                FileLog.Error("Error closing dialog", ex);
             }
         }
 
