@@ -44,3 +44,6 @@ jobs:
 
       - name: Build
         run: dotnet build CsharpDialog.sln --configuration Release --no-restore --verbosity minimal
+
+      - name: Test
+        run: dotnet test tests/CsharpDialog.Core.Tests/CsharpDialog.Core.Tests.csproj --configuration Release --verbosity minimal

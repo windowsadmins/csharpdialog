@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>csharpDialog.App</RootNamespace>
+    <AssemblyName>Managed Notifications Dialog</AssemblyName>
+    <Product>Managed Notifications Dialog</Product>
+    <Description>Managed Notifications Dialog</Description>
+    <Version>1.0.0</Version>
+    <ApplicationIcon>Assets\ManagedNotificationsDialog.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- PriGen needs the VS UWP workload (Microsoft.Build.Packaging.Pri.Tasks.dll), which a plain
+         SDK machine or CI runner lacks. build.ps1 generates resources.pri with makepri.exe instead. -->
+    <EnableCoreMrtTooling>false</EnableCoreMrtTooling>
+    <!-- MVVMTK0045: field-based [ObservableProperty] AOT warning. Partial properties fail with
+         the current WinUI XAML compiler + CsWinRT combination. -->
+    <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
+  </PropertyGroup>
+
+  <!-- Build timestamp for version display -->
+  <PropertyGroup>
+    <BuildTimestamp>$([System.DateTime]::Now.ToString("yyyy.MM.dd.HHmm"))</BuildTimestamp>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>BuildTimestamp</_Parameter1>
+      <_Parameter2>$(BuildTimestamp)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250401001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CsharpDialog.Core\CsharpDialog.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\ManagedNotificationsDialog.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\ManagedNotificationsDialog.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
