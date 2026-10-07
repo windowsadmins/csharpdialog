@@ -33,3 +33,6 @@ artifacts/
 
 # Test outputs
 TestResults/
+
+# Worktrees
+/.worktrees/

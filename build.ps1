@@ -39,6 +39,9 @@ if ($SkipPkg) {
 $rootPath = $PSScriptRoot
 $solutionFile = Join-Path $rootPath "csharpDialog.sln"
 $cliProject = Join-Path $rootPath "src\csharpDialog.CLI\csharpDialog.CLI.csproj"
+$appProjectDir = Join-Path $rootPath "src\CsharpDialog.App"
+$appProject = Join-Path $appProjectDir "CsharpDialog.App.csproj"
+$appExeName = "Managed Notifications Dialog.exe"
 $artifactsDir = Join-Path $rootPath "dist"
 if (-not (Test-Path $artifactsDir)) {
     New-Item -ItemType Directory -Path $artifactsDir | Out-Null
@@ -260,6 +263,127 @@ function Publish-CliOutput {
     }
 }
 
+# Generates resources.pri and copies XBF binary XAML files to the publish output.
+#
+# EnableCoreMrtTooling=false is set in CsharpDialog.App.csproj because the MSBuild PriGen
+# step needs the VS "Universal Windows Platform development" workload, which a plain SDK
+# machine or CI runner lacks. This replicates what PriGen would do:
+#  1. Copy XBF (binary XAML) files from obj/ to the publish dir so MRT can open them.
+#  2. Stage the XBFs with the WinUI 3 framework PRI files.
+#  3. Run makepri.exe new on the staging dir; its PRI indexer merges
+#     Microsoft.UI.Xaml.Controls.pri (themeresources.xbf, generic.xbf, ...) into the output.
+#  4. Write the merged resources.pri to the publish dir.
+function Publish-AppResources {
+    param(
+        [Parameter(Mandatory)][string]$Runtime,
+        [Parameter(Mandatory)][string]$OutputDir
+    )
+
+    Write-Host "Generating XAML resources (XBF + resources.pri) for the GUI ($Runtime)..." -ForegroundColor Cyan
+
+    # makepri.exe runs on the HOST, not the target, so prefer the host architecture.
+    $hostArch = switch ($env:PROCESSOR_ARCHITECTURE) {
+        'AMD64' { 'x64' }
+        'ARM64' { 'arm64' }
+        default { 'x86' }
+    }
+    $toolArchOrder = @($hostArch) + (@('x64', 'arm64', 'x86') | Where-Object { $_ -ne $hostArch })
+
+    $sdkBinRoots = @(
+        "$env:ProgramFiles\Windows Kits\10\bin",
+        "${env:ProgramFiles(x86)}\Windows Kits\10\bin"
+    ) | Where-Object { Test-Path $_ }
+
+    $makepri = $null
+    foreach ($root in $sdkBinRoots) {
+        foreach ($toolArch in $toolArchOrder) {
+            $candidate = Get-ChildItem "$root\*\$toolArch\makepri.exe" -ErrorAction SilentlyContinue |
+                Sort-Object { [version]($_.FullName -replace '.*\\(\d+\.\d+\.\d+\.\d+)\\.*', '$1') } -Descending |
+                Select-Object -First 1
+            if ($candidate) { $makepri = $candidate.FullName; break }
+        }
+        if ($makepri) { break }
+    }
+
+    if (-not $makepri) {
+        throw "makepri.exe not found in the Windows SDK. Install the Windows 10/11 SDK; the GUI cannot load its XAML without resources.pri."
+    }
+
+    $xbfFiles = Get-ChildItem (Join-Path $appProjectDir "obj\$Configuration") -Recurse -Filter "*.xbf" -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match [regex]::Escape("\$Runtime\") }
+    if (-not $xbfFiles) {
+        throw "No XBF files found under obj\$Configuration for $Runtime."
+    }
+    $xbfRootPath = ($xbfFiles[0].FullName -split [regex]::Escape("\$Runtime\"))[0] + "\$Runtime"
+
+    $stagingDir = Join-Path ([System.IO.Path]::GetTempPath()) "csharpdialog-pri-$Runtime"
+    if (Test-Path $stagingDir) { Remove-Item $stagingDir -Recurse -Force }
+    New-Item -ItemType Directory $stagingDir | Out-Null
+
+    try {
+        # resources.pri maps resources as paths relative to the exe ("App.xbf",
+        # "Views\RunPage.xbf"), so each XBF goes to both the staging and the publish dir.
+        foreach ($xbf in $xbfFiles) {
+            $relativePath = $xbf.FullName.Substring($xbfRootPath.Length).TrimStart('\')
+            foreach ($destRoot in @($stagingDir, $OutputDir)) {
+                $dest = Join-Path $destRoot $relativePath
+                $destDir = Split-Path $dest
+                if (-not (Test-Path $destDir)) { New-Item -ItemType Directory $destDir | Out-Null }
+                Copy-Item $xbf.FullName $dest -Force
+            }
+        }
+
+        $frameworkPris = Get-ChildItem $OutputDir -Filter "Microsoft.*.pri"
+        foreach ($pri in $frameworkPris) {
+            Copy-Item $pri.FullName (Join-Path $stagingDir $pri.Name) -Force
+        }
+
+        $priconfigPath = Join-Path $stagingDir "priconfig.xml"
+        & $makepri createconfig /cf $priconfigPath /dq "en-US" /pv "10.0.0" /o 2>&1 | Out-Null
+
+        $outPriPath = Join-Path $OutputDir "resources.pri"
+        $priOutput = & $makepri new /pr $stagingDir /cf $priconfigPath /in "csharpDialog.App" /of $outPriPath /o 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "makepri.exe failed (exit $LASTEXITCODE): $priOutput"
+        }
+
+        Write-Host "Generated resources.pri: $($xbfFiles.Count) XBF + $($frameworkPris.Count) framework PRI(s) merged" -ForegroundColor Green
+    }
+    finally {
+        Remove-Item $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Publishes the Managed Notifications Dialog GUI into the same folder as the CLI, so the
+# MSI and .pkg install it beside dialog.exe. Both are self-contained .NET apps built from
+# the same SDK, so the runtime files they share are identical.
+function Publish-AppOutput {
+    param(
+        [string]$Runtime,
+        [string]$PublishDirectory,
+        [string]$BuildVersion
+    )
+
+    Write-Host "Publishing Managed Notifications Dialog GUI ($Runtime) with version $BuildVersion..." -ForegroundColor Green
+    & dotnet publish $appProject -c $Configuration -r $Runtime --self-contained true /p:Version=$BuildVersion -o $PublishDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed for the GUI ($Runtime)."
+    }
+
+    Publish-AppResources -Runtime $Runtime -OutputDir (Resolve-Path $PublishDirectory).Path
+
+    $appExe = Join-Path $PublishDirectory $appExeName
+    if (-not (Test-Path $appExe)) {
+        throw "Expected GUI executable not found: $appExe"
+    }
+
+    if ($Sign) {
+        $certificateName = "$(if ($env:SIGNING_CERT_CN) { $env:SIGNING_CERT_CN } else { 'unset-signing-cert-cn' })"
+        Write-Host "Signing published executable: $appExeName" -ForegroundColor Cyan
+        Invoke-CodeSign -TargetFile $appExe -CertificateName $certificateName -TimestampUrl "http://timestamp.sectigo.com"
+    }
+}
+
 function Get-WixUpgradeCode {
     $upgradeCodeFile = Join-Path $rootPath ".wix-upgrade-code"
     if (Test-Path $upgradeCodeFile) {
@@ -404,6 +528,7 @@ function Write-WixMainSource {
            UpgradeCode="$UpgradeCode"
            InstallerVersion="500">
     <SummaryInformation Description="$ProductName Installer" />
+    <MediaTemplate EmbedCab="yes" />
     <StandardDirectory Id="$installDir">
       <Directory Id="INSTALLFOLDER" Name="$ProductName">
         <Component Id="SetPathComponent" Bitness="always64">
@@ -413,9 +538,20 @@ function Write-WixMainSource {
         </Component>
       </Directory>
     </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="GuiShortcutComponent" Guid="6F1C2B7A-4E3D-4A8B-9C51-2D7E0F3A6B94" Bitness="always64">
+        <Shortcut Id="GuiStartMenuShortcut"
+                  Name="Managed Notifications Dialog"
+                  Description="Show test dialogs and read csharpDialog logs"
+                  Target="[INSTALLFOLDER]$appExeName"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="GuiShortcut" Value="1" Type="integer" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
     <Feature Id="MainFeature" Title="$ProductName" Level="1">
       <ComponentGroupRef Id="$ComponentGroupId" />
       <ComponentRef Id="SetPathComponent" />
+      <ComponentRef Id="GuiShortcutComponent" />
     </Feature>
   </Package>
 </Wix>
@@ -539,6 +675,18 @@ if (`$currentPath -notlike "*`$installPath*") {
 } else {
     Write-Host "`$installPath already in system PATH" -ForegroundColor Cyan
 }
+
+# Start Menu shortcut for the Managed Notifications Dialog GUI
+`$guiExe = Join-Path `$installPath '$appExeName'
+if (Test-Path `$guiExe) {
+    `$programs = [Environment]::GetFolderPath('CommonPrograms')
+    `$shell = New-Object -ComObject WScript.Shell
+    `$shortcut = `$shell.CreateShortcut((Join-Path `$programs 'Managed Notifications Dialog.lnk'))
+    `$shortcut.TargetPath = `$guiExe
+    `$shortcut.WorkingDirectory = `$installPath
+    `$shortcut.Description = 'Show test dialogs and read csharpDialog logs'
+    `$shortcut.Save()
+}
 "@
         Set-Content -Path (Join-Path $scriptsDir "postinstall.ps1") -Value $postinstallScript -Encoding UTF8
 
@@ -605,6 +753,12 @@ foreach ($runtimeOption in $runtimeList) {
 
     if ($Msi -or $Pkg) {
         Publish-CliOutput -Runtime $runtimeOption -PublishDirectory $publishDir -BuildVersion $packageVersion
+        try {
+            Publish-AppOutput -Runtime $runtimeOption -PublishDirectory $publishDir -BuildVersion $packageVersion
+        } catch {
+            Write-Error $_
+            exit 1
+        }
     }
 
     if ($Msi) {

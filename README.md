@@ -26,6 +26,17 @@ The project is structured as a multi-project solution:
 - **csharpDialog.Core**: Shared library with dialog configuration and services
 - **csharpDialog.CLI**: Command-line interface application
 - **csharpDialog.WPF**: Windows Presentation Foundation GUI components
+- **CsharpDialog.App**: Managed Notifications Dialog, the WinUI 3 admin app
+
+## Managed Notifications Dialog
+
+`Managed Notifications Dialog.exe` installs beside `dialog.exe` in `C:\Program Files\csharpDialog` and adds a Start Menu shortcut. It has three tabs:
+
+- **Prefs** shows the app and CLI versions and the paths csharpDialog uses, read-only. csharpDialog reads no machine settings from the registry; every option is a command-line flag, so there is nothing to edit.
+- **Run** shows a test dialog (information, progress or alert) by running `dialog.exe` with that preset's flags, unelevated, and streams its output.
+- **Logs** reads the CLI's diagnostic log, `%ProgramData%\ManagedNotifications\logs\csharpdialog.log` and its rotated generations, coloured by level.
+
+Pass `--tab run`, `--tab logs` or `--tab prefs` to open on a given tab.
 
 ## Installation
 
