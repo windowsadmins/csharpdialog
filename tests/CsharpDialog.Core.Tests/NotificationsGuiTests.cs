@@ -4,6 +4,7 @@ using csharpDialog.Core.Services;
 
 namespace CsharpDialog.Core.Tests;
 
+[Collection("FileLog")]
 public class LogLineClassifierTests
 {
     [Theory]
@@ -80,6 +81,7 @@ public class TestDialogPresetsTests
     }
 }
 
+[Collection("FileLog")]
 public class InstallPathsTests
 {
     [Fact]
