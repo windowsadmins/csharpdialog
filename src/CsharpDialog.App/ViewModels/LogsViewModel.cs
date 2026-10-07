@@ -12,7 +12,7 @@ namespace csharpDialog.App.ViewModels;
 /// </summary>
 public partial class LogsViewModel : ObservableObject
 {
-    private static string LogDirectory => InstallPaths.LogDirectory;
+    public static string LogDirectory => InstallPaths.LogDirectory;
 
     public ObservableCollection<LogFile> LogFiles { get; } = [];
 

@@ -12,6 +12,7 @@ public sealed partial class LogsPage : Page
     public LogsPage()
     {
         InitializeComponent();
+        _vm.LogFiles.CollectionChanged += (_, _) => UpdateEmptyState();
 
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         _vm.Refresh();
@@ -19,6 +20,7 @@ public sealed partial class LogsPage : Page
         LogFileList.ItemsSource = _vm.LogFiles;
         LogFileList.SelectedItem = _vm.SelectedLog;
         UpdateLogContent();
+        UpdateEmptyState();
     }
 
     // ── Event Handlers ───────────────────────────────────────────
@@ -52,6 +54,17 @@ public sealed partial class LogsPage : Page
     {
         if (e.PropertyName == nameof(LogsViewModel.FilteredLines))
             UpdateLogContent();
+    }
+
+    private void UpdateEmptyState()
+    {
+        var noLogs = _vm.LogFiles.Count == 0;
+        NoLogsState.Visibility = noLogs ? Visibility.Visible : Visibility.Collapsed;
+        NoLogsPath.Text = LogsViewModel.LogDirectory;
+        EmptyTitle.Text = noLogs ? "No logs" : "No Log Selected";
+        EmptySubtitle.Text = noLogs
+            ? "No csharpDialog log yet. dialog.exe writes one on its first run."
+            : "Select a log from the sidebar to view its contents.";
     }
 
     private void UpdateLogContent()
