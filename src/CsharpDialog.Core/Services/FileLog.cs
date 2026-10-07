@@ -99,6 +99,15 @@ public static class FileLog
             {
                 var path = LogPath;
                 var directory = Path.GetDirectoryName(path);
+
+                // The logs folder is user-writable, and dialog.exe can run as SYSTEM, so never
+                // write through a link a user left in it: drop links on the way down from the
+                // data root before creating anything, then open the file itself without
+                // following one (OpenAppend below).
+                var root = string.IsNullOrEmpty(directory) ? null : Path.GetDirectoryName(directory);
+                if (!string.IsNullOrEmpty(root))
+                    SafeLogFile.RemoveLinks(root, path);
+
                 if (!string.IsNullOrEmpty(directory))
                     Directory.CreateDirectory(directory);
 
@@ -110,7 +119,8 @@ public static class FileLog
                 }
 
                 RotateIfNeeded(path, Utf8NoBom.GetByteCount(line));
-                File.AppendAllText(path, line, Utf8NoBom);
+                using var writer = SafeLogFile.OpenAppend(path);
+                writer.Write(line);
             }
             catch
             {

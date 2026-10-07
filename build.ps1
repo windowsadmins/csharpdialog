@@ -10,6 +10,8 @@ param(
     [switch]$SkipMsi = $false,
     [switch]$SkipPkg = $false,
     [string]$Configuration = "Release",
+    # Release version, YYYY.MM.DD.HHMM; the release workflow passes the tag. Defaults to now.
+    [string]$Version = "",
     [string[]]$Runtime = @("win-x64", "win-arm64")
 )
 
@@ -777,7 +779,7 @@ if ($runtimeList.Count -eq 0) {
     $runtimeList = @("win-x64")
 }
 
-$timestamp = Get-Date -Format "yyyy.MM.dd.HHmm"
+$timestamp = if ($Version) { $Version } else { Get-Date -Format "yyyy.MM.dd.HHmm" }
 $packageVersion = $timestamp
 
 # Convert timestamp to MSI-compatible version format

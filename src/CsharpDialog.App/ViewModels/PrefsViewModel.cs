@@ -42,14 +42,14 @@ public partial class PrefsViewModel : ObservableObject
         Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
     }
 
+    // The version the release stamps (build.ps1 passes /p:Version), zero-padded, never the
+    // time this copy happened to be built.
     private static string ReadAppVersion()
     {
         var assembly = Assembly.GetExecutingAssembly();
-        var stamp = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-            .FirstOrDefault(a => a.Key == "BuildTimestamp")?.Value;
-        var info = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        var version = info?.Split('+')[0] ?? assembly.GetName().Version?.ToString() ?? "unknown";
-        return string.IsNullOrEmpty(stamp) || version != "1.0.0" ? version : stamp;
+        return ReleaseVersion.Display(
+            assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString());
     }
 
     private static string ReadFileVersion(string path)
