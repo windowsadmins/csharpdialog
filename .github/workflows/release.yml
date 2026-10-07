@@ -46,7 +46,7 @@ jobs:
 
       - name: Build + package (unsigned)
         shell: pwsh
-        run: .\build.ps1 -Build -Msi -Pkg
+        run: .\build.ps1 -Build -Msi -Pkg -Version "${{ steps.version.outputs.version }}"
 
       - name: Collect release artifacts
         shell: pwsh
