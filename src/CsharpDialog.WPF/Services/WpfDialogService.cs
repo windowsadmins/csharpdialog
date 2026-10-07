@@ -39,7 +39,7 @@ namespace csharpDialog.WPF.Services
         public DialogResult ShowDialog(DialogConfiguration configuration)
         {
             _configuration = configuration;
-            DialogResult result = new DialogResult { ButtonPressed = "ok", Timestamp = DateTime.UtcNow };
+            DialogResult result = new DialogResult { ButtonPressed = "ok", Timestamp = DateTime.Now };
 
             Application.Current?.Dispatcher.Invoke(() =>
             {
