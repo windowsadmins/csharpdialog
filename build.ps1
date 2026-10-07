@@ -45,7 +45,7 @@ $appProjectDir = Join-Path $rootPath "src\CsharpDialog.App"
 $appProject = Join-Path $appProjectDir "CsharpDialog.App.csproj"
 $appExeName = "Managed Notifications Dialog.exe"
 
-# ACLs for %ProgramData%\ManagedNotifications, applied by both the MSI and the .pkg.
+# ACLs for %ProgramData%\ManagedNotifications, applied by the MSI here and by scripts/postinstall.ps1.
 # Root: owner SYSTEM; SYSTEM and Administrators full control; Users read; not inherited.
 # logs: the same, plus Users modify, since user-context dialog.exe runs write and rotate
 # csharpdialog.log there. No other folder below the root grants users write.
@@ -684,55 +684,17 @@ postinstall_action: script
         Write-Host "Copying payload files from $PublishDirectory..." -ForegroundColor Cyan
         Copy-Item -Path (Join-Path $PublishDirectory '*') -Destination $payloadDir -Recurse -Force
 
-        # Create scripts directory with postinstall script to add to PATH
+        # Install scripts come from the repository's scripts/ folder, the same copy cimipkg
+        # reads when the release is packaged from the tag, so the two never drift.
         $scriptsDir = Join-Path $tempDir "scripts"
         New-Item -ItemType Directory -Path $scriptsDir | Out-Null
-
-        $postinstallScript = @"
-# csharpDialog postinstall script
-# Adds installation directory to system PATH
-
-`$installPath = 'C:\Program Files\csharpDialog'
-
-# Get current system PATH
-`$currentPath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
-
-# Check if already in PATH
-if (`$currentPath -notlike "*`$installPath*") {
-    # Add to system PATH
-    `$newPath = "`$currentPath;`$installPath"
-    [Environment]::SetEnvironmentVariable('PATH', `$newPath, 'Machine')
-    Write-Host "Added `$installPath to system PATH" -ForegroundColor Green
-    Write-Host "NOTE: Open a new terminal window to use 'dialog' command" -ForegroundColor Yellow
-} else {
-    Write-Host "`$installPath already in system PATH" -ForegroundColor Cyan
-}
-
-# Start Menu shortcut for the Managed Notifications Dialog GUI
-`$guiExe = Join-Path `$installPath '$appExeName'
-if (Test-Path `$guiExe) {
-    `$programs = [Environment]::GetFolderPath('CommonPrograms')
-    `$shell = New-Object -ComObject WScript.Shell
-    `$shortcut = `$shell.CreateShortcut((Join-Path `$programs 'Managed Notifications Dialog.lnk'))
-    `$shortcut.TargetPath = `$guiExe
-    `$shortcut.WorkingDirectory = `$installPath
-    `$shortcut.Description = 'Show test dialogs and read csharpDialog logs'
-    `$shortcut.Save()
-}
-
-# ProgramData\ManagedNotifications: SYSTEM and Administrators full control, Users read,
-# inheritance off. Only the logs subfolder lets users write, because dialog.exe runs in
-# user context and appends to its log there.
-`$dataRoot = Join-Path `$env:ProgramData 'ManagedNotifications'
-`$logsDir = Join-Path `$dataRoot 'logs'
-New-Item -ItemType Directory -Path `$logsDir -Force | Out-Null
-foreach (`$entry in @(@(`$dataRoot, '$($script:DataRootSddl -replace '^O:SYG:SY', '')'), @(`$logsDir, '$($script:LogsDirSddl -replace '^O:SYG:SY', '')'))) {
-    `$security = New-Object System.Security.AccessControl.DirectorySecurity
-    `$security.SetSecurityDescriptorSddlForm(`$entry[1], 'Access')
-    Set-Acl -Path `$entry[0] -AclObject `$security
-}
-"@
-        Set-Content -Path (Join-Path $scriptsDir "postinstall.ps1") -Value $postinstallScript -Encoding UTF8
+        $sourceScripts = @(Get-ChildItem -Path (Join-Path $rootPath "scripts") -Filter '*.ps1' -File -ErrorAction SilentlyContinue)
+        if ($sourceScripts.Count -eq 0) {
+            throw "No install scripts found under $(Join-Path $rootPath 'scripts')."
+        }
+        foreach ($file in $sourceScripts) {
+            Copy-Item -LiteralPath $file.FullName -Destination $scriptsDir -Force
+        }
 
         # Create .pkg as ZIP
         if (Test-Path $OutputPath) {

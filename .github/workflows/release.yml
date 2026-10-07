@@ -61,11 +61,25 @@ jobs:
       - name: Prepare release zips
         shell: pwsh
         run: |
+          # cimipkg packages a release from csharpdialog-<arch>.zip as the payload plus
+          # build-info.yaml and scripts/ read from the repository at this tag. The zip must
+          # hold both exes, and scripts/postinstall.ps1 must exist, or the Start menu
+          # shortcut it creates never reaches an installed machine.
+          foreach ($required in 'build-info.yaml', 'scripts/postinstall.ps1', 'scripts/uninstall.ps1') {
+            if (-not (Test-Path $required)) { throw "$required is missing at this tag" }
+          }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
           foreach ($rid in @("win-x64", "win-arm64")) {
             $arch = if ($rid -eq "win-x64") { "x64" } else { "arm64" }
             $publishDir = "src/CsharpDialog.CLI/bin/Release/net10.0-windows/$rid/publish"
             if (-not (Test-Path $publishDir)) { throw "Publish output not found: $publishDir" }
             Compress-Archive -Path "$publishDir/*" -DestinationPath "release/csharpdialog-$arch.zip" -Force
+            $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path "release/csharpdialog-$arch.zip").Path)
+            try {
+              foreach ($exe in 'dialog.exe', 'Managed Notifications Dialog.exe') {
+                if (-not ($zip.Entries | Where-Object FullName -eq $exe)) { throw "csharpdialog-$arch.zip is missing $exe" }
+              }
+            } finally { $zip.Dispose() }
           }
 
       - name: Create GitHub Release
