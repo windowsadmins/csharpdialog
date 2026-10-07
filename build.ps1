@@ -42,6 +42,13 @@ $cliProject = Join-Path $rootPath "src\csharpDialog.CLI\csharpDialog.CLI.csproj"
 $appProjectDir = Join-Path $rootPath "src\CsharpDialog.App"
 $appProject = Join-Path $appProjectDir "CsharpDialog.App.csproj"
 $appExeName = "Managed Notifications Dialog.exe"
+
+# ACLs for %ProgramData%\ManagedNotifications, applied by both the MSI and the .pkg.
+# Root: owner SYSTEM; SYSTEM and Administrators full control; Users read; not inherited.
+# logs: the same, plus Users modify, since user-context dialog.exe runs write and rotate
+# csharpdialog.log there. No other folder below the root grants users write.
+$script:DataRootSddl = "O:SYG:SYD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)"
+$script:LogsDirSddl = "O:SYG:SYD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;BU)"
 $artifactsDir = Join-Path $rootPath "dist"
 if (-not (Test-Path $artifactsDir)) {
     New-Item -ItemType Directory -Path $artifactsDir | Out-Null
@@ -548,10 +555,33 @@ function Write-WixMainSource {
         <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="GuiShortcut" Value="1" Type="integer" KeyPath="yes" />
       </Component>
     </StandardDirectory>
+    <!-- ProgramData\ManagedNotifications gets its own ACL instead of inheriting ProgramData's,
+         which lets any user create files there. Permanent, so an uninstall keeps the logs. -->
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="NotificationsDataDir" Name="ManagedNotifications">
+        <Directory Id="NotificationsLogsDir" Name="logs" />
+      </Directory>
+    </StandardDirectory>
+    <Component Id="DataDirectoryAcl" Directory="NotificationsDataDir" Permanent="yes"
+               Guid="3D8A5E21-7C4B-4F96-A1E3-9B2D6F0C4A58" Bitness="always64">
+      <CreateFolder>
+        <PermissionEx Sddl="$($script:DataRootSddl)" />
+      </CreateFolder>
+      <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="DataDirectoryAcl" Value="1" Type="integer" KeyPath="yes" />
+    </Component>
+    <Component Id="LogsDirectoryAcl" Directory="NotificationsLogsDir" Permanent="yes"
+               Guid="8E1F4B6C-2A9D-4C37-B5E0-6D3A7F9C1B42" Bitness="always64">
+      <CreateFolder>
+        <PermissionEx Sddl="$($script:LogsDirSddl)" />
+      </CreateFolder>
+      <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="LogsDirectoryAcl" Value="1" Type="integer" KeyPath="yes" />
+    </Component>
     <Feature Id="MainFeature" Title="$ProductName" Level="1">
       <ComponentGroupRef Id="$ComponentGroupId" />
       <ComponentRef Id="SetPathComponent" />
       <ComponentRef Id="GuiShortcutComponent" />
+      <ComponentRef Id="DataDirectoryAcl" />
+      <ComponentRef Id="LogsDirectoryAcl" />
     </Feature>
   </Package>
 </Wix>
@@ -686,6 +716,18 @@ if (Test-Path `$guiExe) {
     `$shortcut.WorkingDirectory = `$installPath
     `$shortcut.Description = 'Show test dialogs and read csharpDialog logs'
     `$shortcut.Save()
+}
+
+# ProgramData\ManagedNotifications: SYSTEM and Administrators full control, Users read,
+# inheritance off. Only the logs subfolder lets users write, because dialog.exe runs in
+# user context and appends to its log there.
+`$dataRoot = Join-Path `$env:ProgramData 'ManagedNotifications'
+`$logsDir = Join-Path `$dataRoot 'logs'
+New-Item -ItemType Directory -Path `$logsDir -Force | Out-Null
+foreach (`$entry in @(@(`$dataRoot, '$($script:DataRootSddl -replace '^O:SYG:SY', '')'), @(`$logsDir, '$($script:LogsDirSddl -replace '^O:SYG:SY', '')'))) {
+    `$security = New-Object System.Security.AccessControl.DirectorySecurity
+    `$security.SetSecurityDescriptorSddlForm(`$entry[1], 'Access')
+    Set-Acl -Path `$entry[0] -AclObject `$security
 }
 "@
         Set-Content -Path (Join-Path $scriptsDir "postinstall.ps1") -Value $postinstallScript -Encoding UTF8
