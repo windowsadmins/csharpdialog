@@ -2,14 +2,15 @@ using System.Diagnostics;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using csharpDialog.Core.Notifications;
+using csharpDialog.Core.Services;
 
 namespace csharpDialog.App.ViewModels;
 
 /// <summary>
-/// ViewModel for the Prefs tab. csharpDialog reads no machine settings: every option is a
-/// command-line flag on dialog.exe, and nothing is read from HKLM\SOFTWARE\Policies\csharpDialog
-/// or HKLM\SOFTWARE\csharpDialog\Settings. So the tab has nothing to edit and no Unlock; it
-/// shows the version and the paths the tool uses, read-only.
+/// ViewModel for the Prefs tab. Every dialog option is a command-line flag on dialog.exe; the one
+/// setting csharpDialog reads is AuthorisationKey, and only from policy
+/// (HKLM\SOFTWARE\Policies\csharpDialog). So the tab has nothing to edit and no Unlock; it shows
+/// whether policy sets the key, the version and the paths the tool uses, read-only.
 /// </summary>
 public partial class PrefsViewModel : ObservableObject
 {
@@ -27,6 +28,13 @@ public partial class PrefsViewModel : ObservableObject
     public string LogDirectory { get; } = InstallPaths.LogDirectory;
 
     public string LogFile { get; } = InstallPaths.LogFile;
+
+    /// <summary>True when policy sets AuthorisationKey, so callers must supply the key.</summary>
+    public bool AuthorisationKeyManaged { get; } = DialogAuthorisation.IsManaged;
+
+    public string AuthorisationKeyStatus => AuthorisationKeyManaged
+        ? "Managed: set by policy. Callers must pass the key in DIALOG_AUTH_KEY or with --key, or dialog.exe exits 30."
+        : "Not set. Any caller can show a dialog.";
 
     public void Load()
     {

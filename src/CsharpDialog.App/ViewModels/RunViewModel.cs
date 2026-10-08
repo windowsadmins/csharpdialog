@@ -3,6 +3,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using csharpDialog.Core.Notifications;
+using csharpDialog.Core.Services;
 using Microsoft.UI.Dispatching;
 
 namespace csharpDialog.App.ViewModels;
@@ -31,6 +32,15 @@ public partial class RunViewModel : ObservableObject
     [ObservableProperty] private int _errorCount;
     [ObservableProperty] private string _lastResult = string.Empty;
     [ObservableProperty] private TestDialogPresets.Preset _selectedPreset = TestDialogPresets.Info;
+
+    /// <summary>
+    /// The authorisation key to run the test dialog with, when policy requires one. It reaches
+    /// dialog.exe only through the DIALOG_AUTH_KEY environment variable, never the command line,
+    /// where any process on the machine could read it.
+    /// </summary>
+    public string AuthorisationKey { get; set; } = string.Empty;
+
+    public bool AuthorisationRequired { get; } = DialogAuthorisation.IsManaged;
 
     public IReadOnlyList<TestDialogPresets.Preset> Presets => TestDialogPresets.All;
 
@@ -88,6 +98,10 @@ public partial class RunViewModel : ObservableObject
             };
             foreach (var arg in preset.Arguments)
                 startInfo.ArgumentList.Add(arg);
+            if (!string.IsNullOrWhiteSpace(AuthorisationKey))
+                startInfo.Environment[DialogAuthorisation.EnvironmentVariable] = AuthorisationKey.Trim();
+            else
+                startInfo.Environment.Remove(DialogAuthorisation.EnvironmentVariable);
 
             _cliProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
             _cliProcess.OutputDataReceived += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) AppendLine(e.Data, LogLineClassifier.Classify(e.Data)); };
@@ -107,6 +121,8 @@ public partial class RunViewModel : ObservableObject
             // WaitForExit without a timeout drains the redirected streams.
             _cliProcess.WaitForExit();
             var exitCode = _cliProcess.ExitCode;
+            if (exitCode == DialogAuthorisation.RejectedExitCode)
+                AppendLine($"Error: dialog.exe exited {exitCode}: policy requires an authorisation key and the one entered does not match.", LogLineLevel.Error);
             _dispatcher.TryEnqueue(() => LastExitCode = exitCode);
         }
         catch (OperationCanceledException)
