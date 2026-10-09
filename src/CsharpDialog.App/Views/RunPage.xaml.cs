@@ -20,6 +20,7 @@ public sealed partial class RunPage : Page
         _vm.PropertyChanged += OnViewModelPropertyChanged;
         _vm.OutputLines.CollectionChanged += (_, _) => ScrollToBottom();
 
+        AuthKeyBox.Visibility = _vm.AuthorisationRequired ? Visibility.Visible : Visibility.Collapsed;
         PresetPicker.ItemsSource = _vm.Presets;
         PresetPicker.SelectedItem = _vm.SelectedPreset;
         UpdatePresetInfo();
@@ -40,6 +41,9 @@ public sealed partial class RunPage : Page
         if (PresetPicker.SelectedItem is TestDialogPresets.Preset preset)
             _vm.SelectedPreset = preset;
     }
+
+    private void AuthKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+        => _vm.AuthorisationKey = AuthKeyBox.Password;
 
     private void ClearButton_Click(object sender, RoutedEventArgs e)
         => _vm.ClearCommand.Execute(null);

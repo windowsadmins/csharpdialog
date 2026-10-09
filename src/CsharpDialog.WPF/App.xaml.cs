@@ -15,10 +15,19 @@ public partial class App : Application
     {
         // Set shutdown mode to close when main window closes
         ShutdownMode = ShutdownMode.OnMainWindowClose;
-        FileLog.Info($"csharpdialog {typeof(App).Assembly.GetName().Version} starting (WPF host): {string.Join(' ', e.Args)}");
-        
+
+        var args = e.Args;
+        if (DialogAuthorisation.Enforce(ref args) is int refused)
+        {
+            FileLog.Info($"Exiting with code {refused}");
+            Environment.Exit(refused);
+            return;
+        }
+
+        FileLog.Info($"csharpdialog {typeof(App).Assembly.GetName().Version} starting (WPF host): {string.Join(' ', args)}");
+
         // Parse command line arguments
-        var configuration = CommandLineParser.ParseArguments(e.Args);
+        var configuration = CommandLineParser.ParseArguments(args);
         
         // Create the dialog window and set it as main window
         var dialogWindow = new MainWindow(configuration);

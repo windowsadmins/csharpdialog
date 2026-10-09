@@ -32,8 +32,8 @@ The project is structured as a multi-project solution:
 
 `Managed Notifications Dialog.exe` installs beside `dialog.exe` in `C:\Program Files\csharpDialog` and adds a Start Menu shortcut. It has three tabs:
 
-- **Prefs** shows the app and CLI versions and the paths csharpDialog uses, read-only. csharpDialog reads no machine settings from the registry; every option is a command-line flag, so there is nothing to edit.
-- **Run** shows a test dialog (information, progress or alert) by running `dialog.exe` with that preset's flags, unelevated, and streams its output.
+- **Prefs** shows whether policy sets the authorisation key (marked Managed), the app and CLI versions, and the paths csharpDialog uses, read-only. Every dialog option is a command-line flag; the authorisation key is the one setting, and it comes only from policy, so there is nothing to edit.
+- **Run** shows a test dialog (information, progress or alert) by running `dialog.exe` with that preset's flags, unelevated, and streams its output. When policy sets an authorisation key, a key box appears; what you type reaches `dialog.exe` through the `DIALOG_AUTH_KEY` environment variable, never the command line.
 - **Logs** reads the CLI's diagnostic log, `%ProgramData%\ManagedNotifications\logs\csharpdialog.log` and its rotated generations, coloured by level.
 
 Pass `--tab run`, `--tab logs` or `--tab prefs` to open on a given tab.
@@ -152,6 +152,37 @@ swiftDialog's locked provisioning dialogs:
 dialog --window --centeronscreen --topmost --button1text "Please wait" `
   --button1disabled --hidedefaultkeyboardaction --quitkey 0 `
   --commandfile "C:\temp\commands.txt"
+```
+
+### Authorisation Key (swiftDialog parity)
+
+An organisation can require every caller to prove it is allowed to put a dialog in front of the user, the way swiftDialog's `AuthorisationKey` does. Set the SHA-256 of a key, as hex, in policy:
+
+| Location | Value | Type |
+|---|---|---|
+| `HKLM\SOFTWARE\Policies\csharpDialog` | `AuthorisationKey` | `REG_SZ`, hex SHA-256 of the UTF-8 key (case-insensitive) |
+
+Once it is set, a caller supplies the plain key, and any other call shows no window, writes `Key authorisation required` to stderr and the log, and exits **30**:
+
+| Supply the key with | Notes |
+|---|---|
+| `DIALOG_AUTH_KEY` environment variable | Preferred: an environment variable is not visible in the process list. It wins when both are given. |
+| `--key <key>` | Visible to other processes through the command line; use only where an environment variable cannot be set. |
+
+The key is trimmed of surrounding whitespace before hashing. Only the policy key is honoured: an `AuthorisationKey` under `HKCU`, `HKLM\SOFTWARE\csharpDialog` or its `Settings` subkey is ignored and logged, since a value anyone could write would let anyone choose the key. csharpDialog never reads the plain key from a file; keeping it somewhere only the intended callers can read is up to the deployment. With no policy value, nothing changes and `--key` is ignored.
+
+Compute the hash to put in policy:
+
+```powershell
+$key = 'your-key'
+-join ([Security.Cryptography.SHA256]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes($key.Trim())) | ForEach-Object { $_.ToString('x2') })
+```
+
+A caller passes the key like this:
+
+```powershell
+$env:DIALOG_AUTH_KEY = $key
+dialog --title "Restart required" --message "Please save your work."
 ```
 
 ### Styling (Legacy)

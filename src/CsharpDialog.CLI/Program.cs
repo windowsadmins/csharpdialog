@@ -32,6 +32,13 @@ namespace csharpDialog.CLI
         {
             try
             {
+                // Before anything else, so --key never reaches the log and a refused caller gets no window
+                if (DialogAuthorisation.Enforce(ref args) is int refused)
+                {
+                    Exit(refused);
+                    return;
+                }
+
                 FileLog.Info($"csharpdialog {typeof(Program).Assembly.GetName().Version} starting: {string.Join(' ', args)}");
 
                 // Check for auto-launch mode first

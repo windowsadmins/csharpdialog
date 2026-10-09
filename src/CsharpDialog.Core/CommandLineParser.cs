@@ -181,6 +181,10 @@ namespace csharpDialog.Core
                     case "--autolaunch":
                         config.Metadata["AutoLaunchFirstRun"] = true;
                         break;
+                    case "--key":
+                        // Checked and removed by DialogAuthorisation before parsing; skip its value if it gets here
+                        i++;
+                        break;
                     case "--help":
                     case "-h":
                         ShowHelp();
@@ -239,6 +243,8 @@ namespace csharpDialog.Core
             Console.WriteLine("  --kiosk                  Kiosk mode (fullscreen, no close button)");
             Console.WriteLine("  --window                 Force GUI window mode (no fullscreen)");
             Console.WriteLine("  --autolaunch             Auto-launch on first-run detection");
+            Console.WriteLine("  --key <key>              Authorisation key, when policy requires one");
+            Console.WriteLine("                           (prefer the DIALOG_AUTH_KEY environment variable)");
             Console.WriteLine("  --help, -h               Show this help");
             Console.WriteLine();
             Console.WriteLine("Examples:");

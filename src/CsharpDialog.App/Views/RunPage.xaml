@@ -36,8 +36,11 @@
                       VerticalAlignment="Center" DisplayMemberPath="Name"
                       SelectionChanged="PresetPicker_SelectionChanged" />
 
-            <!-- Debug + Clear -->
+            <!-- Debug + Clear, and the authorisation key when policy requires one -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" Margin="12,0,0,0" VerticalAlignment="Center">
+                <PasswordBox x:Name="AuthKeyBox" PlaceholderText="Authorisation key" MinWidth="180"
+                             PasswordChanged="AuthKeyBox_PasswordChanged"
+                             ToolTipService.ToolTip="Policy requires a key. It is passed to dialog.exe in DIALOG_AUTH_KEY, never on the command line." />
                 <CheckBox x:Name="DebugToggle" Content="Debug" Checked="DebugToggle_Changed"
                           Unchecked="DebugToggle_Changed" />
                 <Button x:Name="ClearButton" Content="Clear" Click="ClearButton_Click"
