@@ -7,10 +7,9 @@
     folder on the machine PATH, gives Managed Notifications Dialog a Start menu entry for
     every user, and locks down %ProgramData%\ManagedNotifications.
 
-    This file is the one copy. Both things that package csharpDialog read it from here:
-    cimipkg, which reads scripts/ out of the repository as checked out at the release tag,
-    and build.ps1, which stages it into the .pkg it builds. The MSI does the same three
-    things natively in its WiX source.
+    This file is the one copy. Everything that packages csharpDialog reads it from here:
+    cimipkg, which reads scripts/ out of the repository as checked out at the release tag
+    and builds the MSI, and build.ps1, which stages it into the .pkg it builds.
 
     Each step is independent and never fails the install: a missing shortcut or ACL is
     reported and the script still exits 0.
@@ -54,8 +53,7 @@ if (Test-Path -LiteralPath $guiExe) {
 
 # %ProgramData%\ManagedNotifications: SYSTEM and Administrators full control, Users read,
 # inheritance off. Only the logs subfolder lets users write, because dialog.exe runs in
-# user context and appends to its log there. Keep these in step with $script:DataRootSddl
-# and $script:LogsDirSddl in build.ps1, which the MSI applies.
+# user context and appends to its log there.
 try {
     $dataRoot = Join-Path $env:ProgramData 'ManagedNotifications'
     $logsDir = Join-Path $dataRoot 'logs'
