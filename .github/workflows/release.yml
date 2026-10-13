@@ -40,9 +40,15 @@ jobs:
           $version = $env:TAG -replace '^v',''
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Install WiX Toolset
+      - name: Download cimipkg
         shell: pwsh
-        run: dotnet tool install --global wix --version "6.*"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Path tools -Force | Out-Null
+          gh release download --repo windowsadmins/cimian-pkg --pattern "cimipkg-win-x64.zip" --dir tools
+          Expand-Archive -Path tools/cimipkg-win-x64.zip -DestinationPath tools -Force
+          if (-not (Test-Path tools/cimipkg.exe)) { throw "cimipkg download failed" }
 
       - name: Build + package (unsigned)
         shell: pwsh

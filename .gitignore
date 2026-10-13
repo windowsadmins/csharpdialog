@@ -36,3 +36,6 @@ TestResults/
 
 # Worktrees
 /.worktrees/
+
+# cimipkg for local MSI builds
+/tools/
