@@ -10,8 +10,7 @@ namespace csharpDialog.App.ViewModels;
 /// ViewModel for the Prefs tab. Every dialog option is a command-line flag on dialog.exe; the one
 /// setting csharpDialog reads is AuthorisationKey, and only from policy
 /// (HKLM\SOFTWARE\Policies\csharpDialog). So the tab has nothing to edit and no Unlock; it shows
-/// whether policy sets the key, the version, the paths the tool uses and its (empty) list of
-/// services and scheduled tasks, read-only.
+/// whether policy sets the key, the version and the paths the tool uses, read-only.
 /// </summary>
 public partial class PrefsViewModel : ObservableObject
 {
