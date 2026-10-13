@@ -26,7 +26,6 @@ public sealed partial class PrefsPage : Page
     {
         base.OnNavigatedTo(e);
         ViewModel.Load();
-        ManagedBadge.Visibility = ViewModel.AuthorisationKeyManaged ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OpenInstallFolder_Click(object sender, RoutedEventArgs e)
