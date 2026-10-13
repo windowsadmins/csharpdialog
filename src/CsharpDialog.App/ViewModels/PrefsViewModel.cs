@@ -10,7 +10,8 @@ namespace csharpDialog.App.ViewModels;
 /// ViewModel for the Prefs tab. Every dialog option is a command-line flag on dialog.exe; the one
 /// setting csharpDialog reads is AuthorisationKey, and only from policy
 /// (HKLM\SOFTWARE\Policies\csharpDialog). So the tab has nothing to edit and no Unlock; it shows
-/// whether policy sets the key, the version and the paths the tool uses, read-only.
+/// whether policy sets the key, the version, the paths the tool uses and its (empty) list of
+/// services and scheduled tasks, read-only.
 /// </summary>
 public partial class PrefsViewModel : ObservableObject
 {
@@ -30,14 +31,24 @@ public partial class PrefsViewModel : ObservableObject
     public string LogFile { get; } = InstallPaths.LogFile;
 
     /// <summary>True when policy sets AuthorisationKey, so callers must supply the key.</summary>
-    public bool AuthorisationKeyManaged { get; } = DialogAuthorisation.IsManaged;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AuthorisationKeyStatus))]
+    [NotifyPropertyChangedFor(nameof(HasPolicySettings))]
+    private bool _authorisationKeyManaged = DialogAuthorisation.IsManaged;
+
+    /// <summary>
+    /// True when any value comes from HKLM\SOFTWARE\Policies\csharpDialog, which shows the
+    /// one-line policy note at the top of the tab. AuthorisationKey is the only such value.
+    /// </summary>
+    public bool HasPolicySettings => AuthorisationKeyManaged;
 
     public string AuthorisationKeyStatus => AuthorisationKeyManaged
-        ? "Managed: set by policy. Callers must pass the key in DIALOG_AUTH_KEY or with --key, or dialog.exe exits 30."
+        ? "Callers must pass the key in DIALOG_AUTH_KEY or with --key, or dialog.exe exits 30."
         : "Not set. Any caller can show a dialog.";
 
     public void Load()
     {
+        AuthorisationKeyManaged = DialogAuthorisation.IsManaged;
         var cli = InstallPaths.FindCli(AppContext.BaseDirectory);
         CliPath = cli ?? $"Not found ({string.Join("; ", InstallPaths.CliCandidates(AppContext.BaseDirectory))})";
         CliVersion = cli is null ? "Not installed" : ReadFileVersion(cli);
