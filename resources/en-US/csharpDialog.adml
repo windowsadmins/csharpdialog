@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English (en-US) strings for csharpDialog.admx (sample). -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           revision="1.0"
+                           schemaVersion="1.0"
+                           xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+
+  <displayName>csharpDialog</displayName>
+  <description>Settings for csharpDialog</description>
+
+  <resources>
+    <stringTable>
+      <string id="Cat_csharpDialog">csharpDialog</string>
+      <string id="Cat_Security">Security</string>
+
+      <string id="AuthorisationKey">Authorisation key hash</string>
+      <string id="AuthorisationKey_Help">Requires every caller to present a key before a dialog is shown. The value is the lower-case hex SHA-256 of the trimmed key (64 characters), the same value swiftDialog's AuthorisationKey takes, so one key can serve macOS and Windows.
+
+While set, csharpDialog shows a window only to a caller that passes the matching key in the DIALOG_AUTH_KEY environment variable or with --key. Any other launch shows nothing and exits with code 30.
+
+csharpDialog reads this value from policy only. The same value under HKCU or the tool's own settings keys is ignored, so a standard user cannot choose their own key.
+
+Writes AuthorisationKey (REG_SZ).</string>
+    </stringTable>
+
+    <presentationTable>
+      <presentation id="AuthorisationKey">
+        <textBox refId="AuthorisationKey_Value">
+          <label>SHA-256 of the key (hex):</label>
+        </textBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>
