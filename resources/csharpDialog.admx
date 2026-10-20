@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  csharpDialog administrative template (sample).
+
+  Group Policy: copy csharpDialog.admx to C:\Windows\PolicyDefinitions and
+  en-US\csharpDialog.adml to C:\Windows\PolicyDefinitions\en-US (or the central store).
+  Intune: Devices > Configuration > Imported Administrative templates, or ingest it with
+  ./Device/Vendor/MSFT/Policy/ConfigOperations/ADMXInstall/csharpDialog/Policy/csharpDialogAdmx
+  and set ./Device/Vendor/MSFT/Policy/Config/csharpDialog~Policy~csharpDialog~Security/AuthorisationKey.
+
+  The policy writes one value, HKLM\SOFTWARE\Policies\csharpDialog\AuthorisationKey. This file
+  carries no key or hash; supply your own when you configure it.
+-->
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   revision="1.0"
+                   schemaVersion="1.0"
+                   xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="csharpDialog" namespace="csharpDialog.Policies" />
+    <using prefix="windows" namespace="Microsoft.Policies.Windows" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories>
+    <category name="csharpDialog" displayName="$(string.Cat_csharpDialog)" />
+    <category name="Security" displayName="$(string.Cat_Security)">
+      <parentCategory ref="csharpDialog" />
+    </category>
+  </categories>
+  <policies>
+    <policy name="AuthorisationKey"
+            class="Machine"
+            displayName="$(string.AuthorisationKey)"
+            explainText="$(string.AuthorisationKey_Help)"
+            key="SOFTWARE\Policies\csharpDialog"
+            presentation="$(presentation.AuthorisationKey)">
+      <parentCategory ref="Security" />
+      <supportedOn ref="windows:SUPPORTED_Windows_10_0" />
+      <elements>
+        <text id="AuthorisationKey_Value" valueName="AuthorisationKey" maxLength="64" required="true" />
+      </elements>
+    </policy>
+  </policies>
+</policyDefinitions>
