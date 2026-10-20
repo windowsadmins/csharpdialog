@@ -45,12 +45,6 @@ $appProjectDir = Join-Path $rootPath "src\CsharpDialog.App"
 $appProject = Join-Path $appProjectDir "CsharpDialog.App.csproj"
 $appExeName = "Managed Notifications Dialog.exe"
 
-# ACLs for %ProgramData%\ManagedNotifications, applied by the MSI here and by scripts/postinstall.ps1.
-# Root: owner SYSTEM; SYSTEM and Administrators full control; Users read; not inherited.
-# logs: the same, plus Users modify, since user-context dialog.exe runs write and rotate
-# csharpdialog.log there. No other folder below the root grants users write.
-$script:DataRootSddl = "O:SYG:SYD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)"
-$script:LogsDirSddl = "O:SYG:SYD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1301bf;;;BU)"
 $artifactsDir = Join-Path $rootPath "dist"
 if (-not (Test-Path $artifactsDir)) {
     New-Item -ItemType Directory -Path $artifactsDir | Out-Null
@@ -393,258 +387,64 @@ function Publish-AppOutput {
     }
 }
 
-function Get-WixUpgradeCode {
-    $upgradeCodeFile = Join-Path $rootPath ".wix-upgrade-code"
-    if (Test-Path $upgradeCodeFile) {
-        $value = (Get-Content $upgradeCodeFile -Raw -ErrorAction Stop).Trim()
-        return ($value -replace '^\{|\}$')
-    }
-    $guid = [guid]::NewGuid().Guid.ToUpper()
-    Set-Content -Path $upgradeCodeFile -Value $guid -Encoding UTF8
-    return $guid
-}
-
-function New-SafeWixId {
-    param(
-        [string]$Prefix,
-        [string]$RelativePath,
-        [System.Collections.Generic.HashSet[string]]$UsedIds
-    )
-
-    $sanitized = ($RelativePath -replace '[^A-Za-z0-9_]', '_').Trim('_')
-    if ([string]::IsNullOrWhiteSpace($sanitized)) {
-        $sanitized = $Prefix
-    }
-    if ($sanitized.Length -gt 0 -and $sanitized[0] -match '\d') {
-        $sanitized = "_${sanitized}"
-    }
-
-    $candidate = "${Prefix}_${sanitized}"
-    $index = 1
-    while ($UsedIds.Contains($candidate)) {
-        $candidate = "${Prefix}_${sanitized}_${index}"
-        $index++
-    }
-
-    $null = $UsedIds.Add($candidate)
-    return $candidate
-}
-
-function Write-WixComponentFragment {
-    param(
-        [string]$OutputPath,
-        [string]$SourceDirectory,
-        [string]$ComponentGroupId,
-        [bool]$IsX64
-    )
-
-    $doc = New-Object System.Xml.XmlDocument
-    $doc.AppendChild($doc.CreateXmlDeclaration("1.0", "utf-8", $null)) | Out-Null
-
-    $ns = "http://wixtoolset.org/schemas/v4/wxs"
-    $wix = $doc.CreateElement("Wix", $ns)
-    $doc.AppendChild($wix) | Out-Null
-
-    $usedIds = New-Object 'System.Collections.Generic.HashSet[string]'
-    $componentRefs = New-Object System.Collections.Generic.List[string]
-
-    $directoryFragment = $doc.CreateElement("Fragment", $ns)
-    $wix.AppendChild($directoryFragment) | Out-Null
-
-    $directoryRef = $doc.CreateElement("DirectoryRef", $ns)
-    $directoryRef.SetAttribute("Id", "INSTALLFOLDER")
-    $directoryFragment.AppendChild($directoryRef) | Out-Null
-
-    $addDirectory = $null
-    $addDirectory = {
-        param($CurrentPath, $ParentNode)
-
-        $subDirectories = Get-ChildItem -Path $CurrentPath -Directory | Sort-Object Name
-        foreach ($subDir in $subDirectories) {
-            $relativeDirPath = [System.IO.Path]::GetRelativePath($SourceDirectory, $subDir.FullName)
-            $directoryId = New-SafeWixId -Prefix "Dir" -RelativePath $relativeDirPath -UsedIds $usedIds
-
-            $directoryElement = $doc.CreateElement("Directory", $ns)
-            $directoryElement.SetAttribute("Id", $directoryId)
-            $directoryElement.SetAttribute("Name", $subDir.Name)
-            $ParentNode.AppendChild($directoryElement) | Out-Null
-
-            & $addDirectory $subDir.FullName $directoryElement
-        }
-
-        $files = Get-ChildItem -Path $CurrentPath -File | Sort-Object Name
-        foreach ($file in $files) {
-            $relativeFilePath = [System.IO.Path]::GetRelativePath($SourceDirectory, $file.FullName)
-            $relativeForWix = $relativeFilePath -replace '/', '\\'
-
-            $componentId = New-SafeWixId -Prefix "Cmp" -RelativePath $relativeForWix -UsedIds $usedIds
-            $componentElement = $doc.CreateElement("Component", $ns)
-            $componentElement.SetAttribute("Id", $componentId)
-            if ($IsX64) {
-                $componentElement.SetAttribute("Bitness", "always64")
-            }
-            $componentElement.SetAttribute("Guid", "{$([guid]::NewGuid().Guid)}")
-
-            $fileId = New-SafeWixId -Prefix "Fil" -RelativePath $relativeForWix -UsedIds $usedIds
-            $fileElement = $doc.CreateElement("File", $ns)
-            $fileElement.SetAttribute("Id", $fileId)
-            $fileElement.SetAttribute("Source", "`$(var.PublishDir)\$relativeForWix")
-            $fileElement.SetAttribute("KeyPath", "yes")
-
-            $componentElement.AppendChild($fileElement) | Out-Null
-            $ParentNode.AppendChild($componentElement) | Out-Null
-            $componentRefs.Add($componentId) | Out-Null
-        }
-    }
-
-    & $addDirectory $SourceDirectory $directoryRef
-
-    $componentGroupFragment = $doc.CreateElement("Fragment", $ns)
-    $wix.AppendChild($componentGroupFragment) | Out-Null
-
-    $componentGroup = $doc.CreateElement("ComponentGroup", $ns)
-    $componentGroup.SetAttribute("Id", $ComponentGroupId)
-    $componentGroupFragment.AppendChild($componentGroup) | Out-Null
-
-    foreach ($componentId in $componentRefs) {
-        $componentRef = $doc.CreateElement("ComponentRef", $ns)
-        $componentRef.SetAttribute("Id", $componentId)
-        $componentGroup.AppendChild($componentRef) | Out-Null
-    }
-
-    $doc.Save($OutputPath)
-}
-
-function Write-WixMainSource {
-    param(
-        [string]$Path,
-        [string]$ProductName,
-        [string]$Manufacturer,
-        [string]$Version,
-        [string]$UpgradeCode,
-        [string]$ComponentGroupId,
-        [boolean]$IsX64
-    )
-
-    $installDir = if ($IsX64) { "ProgramFiles64Folder" } else { "ProgramFilesFolder" }
-
-    $content = @"
-<?xml version="1.0" encoding="utf-8"?>
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package Name="$ProductName"
-           Manufacturer="$Manufacturer"
-           Version="$Version"
-           UpgradeCode="$UpgradeCode"
-           InstallerVersion="500">
-    <SummaryInformation Description="$ProductName Installer" />
-    <MediaTemplate EmbedCab="yes" />
-    <StandardDirectory Id="$installDir">
-      <Directory Id="INSTALLFOLDER" Name="$ProductName">
-        <Component Id="SetPathComponent" Bitness="always64">
-          <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="InstallPath" Value="[INSTALLFOLDER]" Type="string" KeyPath="yes" />
-          <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="Version" Value="$Version" Type="string" />
-          <Environment Id="UpdatePath" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" Separator=";" System="yes" />
-        </Component>
-      </Directory>
-    </StandardDirectory>
-    <StandardDirectory Id="ProgramMenuFolder">
-      <Component Id="GuiShortcutComponent" Guid="6F1C2B7A-4E3D-4A8B-9C51-2D7E0F3A6B94" Bitness="always64">
-        <Shortcut Id="GuiStartMenuShortcut"
-                  Name="Managed Notifications Dialog"
-                  Description="Show test dialogs and read csharpDialog logs"
-                  Target="[INSTALLFOLDER]$appExeName"
-                  WorkingDirectory="INSTALLFOLDER" />
-        <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="GuiShortcut" Value="1" Type="integer" KeyPath="yes" />
-      </Component>
-    </StandardDirectory>
-    <!-- ProgramData\ManagedNotifications gets its own ACL instead of inheriting ProgramData's,
-         which lets any user create files there. Permanent, so an uninstall keeps the logs. -->
-    <StandardDirectory Id="CommonAppDataFolder">
-      <Directory Id="NotificationsDataDir" Name="ManagedNotifications">
-        <Directory Id="NotificationsLogsDir" Name="logs" />
-      </Directory>
-    </StandardDirectory>
-    <Component Id="DataDirectoryAcl" Directory="NotificationsDataDir" Permanent="yes"
-               Guid="3D8A5E21-7C4B-4F96-A1E3-9B2D6F0C4A58" Bitness="always64">
-      <CreateFolder>
-        <PermissionEx Sddl="$($script:DataRootSddl)" />
-      </CreateFolder>
-      <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="DataDirectoryAcl" Value="1" Type="integer" KeyPath="yes" />
-    </Component>
-    <Component Id="LogsDirectoryAcl" Directory="NotificationsLogsDir" Permanent="yes"
-               Guid="8E1F4B6C-2A9D-4C37-B5E0-6D3A7F9C1B42" Bitness="always64">
-      <CreateFolder>
-        <PermissionEx Sddl="$($script:LogsDirSddl)" />
-      </CreateFolder>
-      <RegistryValue Root="HKLM" Key="Software\$ProductName" Name="LogsDirectoryAcl" Value="1" Type="integer" KeyPath="yes" />
-    </Component>
-    <Feature Id="MainFeature" Title="$ProductName" Level="1">
-      <ComponentGroupRef Id="$ComponentGroupId" />
-      <ComponentRef Id="SetPathComponent" />
-      <ComponentRef Id="GuiShortcutComponent" />
-      <ComponentRef Id="DataDirectoryAcl" />
-      <ComponentRef Id="LogsDirectoryAcl" />
-    </Feature>
-  </Package>
-</Wix>
-"@
-
-    Set-Content -Path $Path -Value $content -Encoding UTF8
+function Find-Cimipkg {
+    # The cimipkg release the workflow downloads, from tools\ or PATH.
+    $local = Join-Path $rootPath "tools\cimipkg.exe"
+    if (Test-Path $local) { return $local }
+    $onPath = Get-Command cimipkg -ErrorAction SilentlyContinue
+    if ($onPath) { return $onPath.Source }
+    return $null
 }
 
 function Build-MsiArtifact {
     param(
         [string]$PublishDirectory,
         [string]$OutputPath,
-        [string]$ProductVersion,
+        [string]$Version,
         [string]$Architecture
     )
 
-    $wixCli = Get-Command "wix" -ErrorAction SilentlyContinue
-    if (-not $wixCli) {
-        throw "WiX Toolset v6 CLI not found on PATH. Install with: dotnet tool install --global wix"
+    # cimipkg builds the MSI from build-info.yaml and scripts/, the same inputs as every
+    # other windowsadmins package: a stable UpgradeCode from the identifier, supersede of
+    # older builds, and scripts/postinstall.ps1 for PATH, the Start menu shortcut and the
+    # ManagedNotifications ACLs that the WiX authoring used to declare.
+    $cimipkg = Find-Cimipkg
+    if (-not $cimipkg) {
+        throw "cimipkg not found. Put cimipkg.exe in tools\ or on PATH (gh release download --repo windowsadmins/cimian-pkg --pattern cimipkg-win-x64.zip)."
     }
 
-    & $wixCli.Source --version *> $null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to execute WiX CLI (wix --version). Ensure the tool is correctly installed."
-    }
-
-    $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
-    New-Item -ItemType Directory -Path $tempDir | Out-Null
+    $stagingDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+    New-Item -ItemType Directory -Path (Join-Path $stagingDir "payload"), (Join-Path $stagingDir "scripts") -Force | Out-Null
 
     try {
-        $componentGroupId = "AppFiles"
-        $harvestPath = Join-Path $tempDir "harvest.wxs"
-        $mainPath = Join-Path $tempDir "product.wxs"
+        Copy-Item -Path (Join-Path $PublishDirectory '*') -Destination (Join-Path $stagingDir "payload") -Recurse -Force
+        Get-ChildItem -Path (Join-Path $rootPath "scripts") -Filter '*.ps1' -File |
+            Copy-Item -Destination (Join-Path $stagingDir "scripts") -Force
 
-        $upgradeCode = Get-WixUpgradeCode
-        $manufacturer = "windowsadmins"
-        $productName = "csharpDialog"
-        $wixVersion = if ($ProductVersion -match '^(\d+\.){2}\d+$') { "$ProductVersion.0" } elseif ($ProductVersion -match '^(\d+\.){3}\d+$') { $ProductVersion } else { "1.0.0.0" }
-        $isX64 = ($Architecture -eq 'x64' -or $Architecture -eq 'arm64')
+        # Without a signing certificate configured, leave the line out rather than hand
+        # cimipkg an unresolved placeholder.
+        $buildInfo = (Get-Content (Join-Path $rootPath "build-info.yaml")) |
+            Where-Object { $env:SIGNING_CERT_CN -or $_ -notmatch '^signing_certificate:' }
+        $buildInfo = foreach ($line in $buildInfo) {
+            $line -replace '\$\{TIMESTAMP\}', $Version
+            if ($line -match '^\s+identifier:') { "  architecture: $Architecture" }
+        }
+        Set-Content -Path (Join-Path $stagingDir "build-info.yaml") -Value $buildInfo -Encoding UTF8
 
-        Write-WixMainSource -Path $mainPath -ProductName $productName -Manufacturer $manufacturer -Version $wixVersion -UpgradeCode $upgradeCode -ComponentGroupId $componentGroupId -IsX64 $isX64
-        Write-WixComponentFragment -OutputPath $harvestPath -SourceDirectory $PublishDirectory -ComponentGroupId $componentGroupId -IsX64 $isX64
-
-        $buildArgs = @(
-            "build",
-            $mainPath,
-            $harvestPath,
-            "-arch", $Architecture,
-            "-d", "PublishDir=$PublishDirectory",
-            "-o", $OutputPath
-        )
-
-        & $wixCli.Source @buildArgs
+        & $cimipkg --verbose --skip-import $stagingDir
         if ($LASTEXITCODE -ne 0) {
-            throw "WiX build step failed."
+            throw "cimipkg MSI build failed for $Architecture."
         }
 
+        $builtMsi = Get-ChildItem (Join-Path $stagingDir "build\*.msi") | Select-Object -First 1
+        if (-not $builtMsi) {
+            throw "cimipkg produced no MSI for $Architecture."
+        }
+        Move-Item $builtMsi.FullName $OutputPath -Force
         Write-Host "MSI created: $OutputPath" -ForegroundColor Green
     }
     finally {
-        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path $stagingDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -769,7 +569,7 @@ foreach ($runtimeOption in $runtimeList) {
 
     if ($Msi) {
         try {
-            Build-MsiArtifact -PublishDirectory $publishDir -OutputPath $msiPath -ProductVersion $msiVersion -Architecture $arch
+            Build-MsiArtifact -PublishDirectory $publishDir -OutputPath $msiPath -Version $packageVersion -Architecture $arch
             Add-FileToSign $msiPath
             $msiArtifacts[$runtimeOption] = $msiPath
         } catch {
